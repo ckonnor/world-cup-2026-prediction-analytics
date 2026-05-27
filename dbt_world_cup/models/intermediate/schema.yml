@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: int_fixture_slots
+    description: Unified fixture list for group-stage matches and knockout slot placeholders.
+    columns:
+      - name: match_id
+        tests:
+          - not_null
+          - unique
+      - name: competition_phase
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["group", "knockout"]
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null

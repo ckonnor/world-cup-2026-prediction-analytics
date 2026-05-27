@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# dbt
+dbt_world_cup/target/
+dbt_world_cup/dbt_packages/
+dbt_world_cup/logs/
+dbt_profiles/.user.yml
+logs/
+
+# Local databases and generated artifacts
+*.duckdb
+*.duckdb.wal
+data/processed/*
+!data/processed/README.md
+
+# Environment
+.env
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,33 @@
+name: world_cup
+version: 1.0.0
+config-version: 2
+
+profile: world_cup
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+vars:
+  raw_data_path: "../data/raw"
+
+models:
+  world_cup:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+    features:
+      +materialized: table
+      +schema: features

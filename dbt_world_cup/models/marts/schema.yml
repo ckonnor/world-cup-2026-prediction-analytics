@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: dim_teams
+    description: One row per concrete group-stage team.
+    columns:
+      - name: team_id
+        tests:
+          - not_null
+          - unique
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: group_letter
+        tests:
+          - not_null
+
+  - name: fct_fixture_schedule
+    description: Match schedule and slot labels for all 104 World Cup matches.
+    columns:
+      - name: match_id
+        tests:
+          - not_null
+          - unique
+      - name: competition_phase
+        tests:
+          - not_null

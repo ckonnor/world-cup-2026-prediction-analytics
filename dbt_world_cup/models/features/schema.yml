@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: features_submission_baseline
+    description: First deterministic baseline prediction table for submission generation.
+    columns:
+      - name: match_id
+        tests:
+          - not_null
+          - unique
+      - name: predicted_home_goals
+        tests:
+          - not_null
+      - name: predicted_away_goals
+        tests:
+          - not_null
+      - name: predicted_result
+        tests:
+          - not_null

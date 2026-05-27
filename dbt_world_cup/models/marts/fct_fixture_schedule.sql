@@ -1,0 +1,12 @@
+select
+    match_id,
+    competition_phase,
+    group_letter,
+    round_name,
+    score_multiplier,
+    home_team,
+    away_team,
+    match_date_utc,
+    venue,
+    uses_slot_labels
+from {{ ref('int_fixture_slots') }}

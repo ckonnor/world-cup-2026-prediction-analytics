@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: stg_group_fixtures
+    description: Cleaned DataCamp group-stage fixture file.
+    columns:
+      - name: match_id
+        description: Unique match identifier.
+        tests:
+          - not_null
+          - unique
+      - name: group_letter
+        description: World Cup group from A through L.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: match_date_utc
+        tests:
+          - not_null
+      - name: venue
+        tests:
+          - not_null
+
+  - name: stg_knockout_slots
+    description: Cleaned DataCamp knockout-round slot file.
+    columns:
+      - name: match_id
+        description: Unique knockout match identifier.
+        tests:
+          - not_null
+          - unique
+      - name: round_name
+        tests:
+          - not_null
+      - name: score_multiplier
+        tests:
+          - not_null
+      - name: slot_home
+        tests:
+          - not_null
+      - name: slot_away
+        tests:
+          - not_null
