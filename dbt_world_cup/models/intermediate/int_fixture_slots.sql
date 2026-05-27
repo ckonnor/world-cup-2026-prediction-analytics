@@ -22,8 +22,8 @@ knockout_stage as (
         score_multiplier,
         slot_home as home_team,
         slot_away as away_team,
-        cast(null as timestamp) as match_date_utc,
-        cast(null as varchar) as venue,
+        match_date_utc,
+        venue,
         true as uses_slot_labels
     from {{ ref('stg_knockout_slots') }}
 )

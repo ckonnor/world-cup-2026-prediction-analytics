@@ -64,9 +64,7 @@ python src/ingest.py
 Build dbt models:
 
 ```powershell
-cd dbt_world_cup
-dbt build --profiles-dir ..\dbt_profiles
-cd ..
+.\.venv\Scripts\dbt.exe build --project-dir dbt_world_cup --profiles-dir dbt_profiles
 ```
 
 Generate a first baseline prediction file:

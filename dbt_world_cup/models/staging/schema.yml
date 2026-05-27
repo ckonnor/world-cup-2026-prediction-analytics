@@ -42,6 +42,12 @@ models:
       - name: score_multiplier
         tests:
           - not_null
+      - name: match_date_utc
+        tests:
+          - not_null
+      - name: venue
+        tests:
+          - not_null
       - name: slot_home
         tests:
           - not_null

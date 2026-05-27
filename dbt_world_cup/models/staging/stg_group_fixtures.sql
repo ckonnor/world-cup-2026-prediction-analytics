@@ -9,9 +9,9 @@ with source as (
 
 select
     cast(match_id as varchar) as match_id,
-    upper(trim(cast("group" as varchar))) as group_letter,
+    upper(trim(cast(_group as varchar))) as group_letter,
     trim(cast(home_team as varchar)) as home_team,
     trim(cast(away_team as varchar)) as away_team,
-    try_cast(date as timestamp) as match_date_utc,
+    try_cast(date_utc as timestamp) as match_date_utc,
     trim(cast(venue as varchar)) as venue
 from source

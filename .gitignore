@@ -20,6 +20,7 @@ logs/
 # Local databases and generated artifacts
 *.duckdb
 *.duckdb.wal
+data/raw/*.csv
 data/processed/*
 !data/processed/README.md
 

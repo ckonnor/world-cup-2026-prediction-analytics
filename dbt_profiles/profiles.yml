@@ -3,5 +3,5 @@ world_cup:
   outputs:
     dev:
       type: duckdb
-      path: ../data/processed/world_cup.duckdb
+      path: data/processed/world_cup.duckdb
       threads: 4
