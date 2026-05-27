@@ -23,3 +23,63 @@ models:
       - name: red_cards
         tests:
           - not_null
+
+  - name: features_historical_match_training
+    description: Point-in-time training table with one row per historical match and prior-form features for both teams.
+    columns:
+      - name: result_id
+        tests:
+          - not_null
+          - unique
+      - name: match_date
+        tests:
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: home_score
+        tests:
+          - not_null
+      - name: away_score
+        tests:
+          - not_null
+      - name: match_outcome
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["home", "away", "draw"]
+      - name: home_prior_10_matches
+        tests:
+          - not_null
+      - name: away_prior_10_matches
+        tests:
+          - not_null
+
+  - name: features_world_cup_group_matches
+    description: 2026 group-stage fixtures joined to team-strength features for model scoring.
+    columns:
+      - name: match_id
+        tests:
+          - not_null
+          - unique
+      - name: group_letter
+        tests:
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: has_home_strength_features
+        tests:
+          - not_null
+      - name: has_away_strength_features
+        tests:
+          - not_null
+      - name: has_complete_strength_features
+        tests:
+          - not_null

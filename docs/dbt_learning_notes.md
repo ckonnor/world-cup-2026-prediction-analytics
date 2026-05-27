@@ -62,8 +62,14 @@ Mart models are analyst-facing tables. `dim_teams` is a dimension table with one
 File:
 
 - `dbt_world_cup/models/features/features_submission_baseline.sql`
+- `dbt_world_cup/models/features/features_historical_match_training.sql`
+- `dbt_world_cup/models/features/features_world_cup_group_matches.sql`
 
 Feature models are model-ready outputs. The current feature model is intentionally simple, but it establishes the pattern: downstream Python should consume tested dbt tables instead of raw CSVs once the baseline matures.
+
+`features_historical_match_training` is the first supervised-learning table. It has one row per completed historical match, feature columns from each team's prior form, and target columns like `home_score`, `away_score`, and `match_outcome`.
+
+`features_world_cup_group_matches` is the scoring table for the 2026 group stage. It joins group fixtures to the latest team-strength snapshot. Some rows are intentionally incomplete because the competition still has placeholders such as playoff teams; those will need fallback handling in Python.
 
 ## Tests
 
