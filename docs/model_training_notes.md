@@ -1,24 +1,45 @@
 # Model Training Notes
 
-The first trained model is intentionally simple and explainable.
+The current trained model is version 2 of the scoring pipeline. It is still intentionally explainable, but it is stronger than the first pass because it combines dbt-built form features with a Python-computed Elo rating system.
 
-## Inputs
+## How dbt Fits In
 
-The training script reads from DuckDB tables built by dbt:
+dbt is responsible for preparing clean, tested analytics tables:
 
-- `main_features.features_historical_match_training`
-- `main_features.features_world_cup_group_matches`
+- `main_features.features_historical_match_training`: one historical match per row, with prior-form features and target scores.
+- `main_marts.mart_team_strength`: one row per team, with recent form as of the 2026 tournament start.
+- `main_staging.stg_group_fixtures`: the 72 known group matches.
+- `main_staging.stg_knockout_slots`: the 32 bracket slots.
+- `main_staging.stg_international_results`: historical results used by the Python Elo pass.
 
-This keeps the model connected to tested dbt transformations instead of reading raw CSV files directly.
+Python then reads those dbt outputs from DuckDB. This is the usual analytics engineering pattern: dbt owns reproducible feature preparation, while Python owns model training and prediction logic.
 
 ## Model
 
-The first version trains two separate scikit-learn pipelines:
+Run:
 
-- one `PoissonRegressor` for home goals
-- one `PoissonRegressor` for away goals
+```powershell
+.\.venv\Scripts\python.exe src\train_model.py
+```
 
-Poisson regression is a reasonable first pass because soccer goals are non-negative count outcomes.
+The script trains separate home-goal and away-goal models. It compares two candidate model families:
+
+- Poisson regression with scaled numeric features.
+- Histogram gradient boosting with Poisson loss.
+
+The selected model is the candidate with the lowest holdout average goal MAE.
+
+## Features
+
+The model uses:
+
+- prior-10-match points, goal difference, goals for, and goals against for both teams
+- home minus away differences for those prior-form features
+- neutral-site flag, including host advantage for Canada, Mexico, and the United States
+- pre-match Elo rating for both teams
+- Elo difference and the Elo expected home result
+
+Small team-name aliases connect fixture names such as `USA`, `Cabo Verde`, and `Cote d'Ivoire` to the historical source names.
 
 ## Evaluation
 
@@ -27,30 +48,36 @@ The train/holdout split is time-based:
 - Training rows: matches before `2022-01-01`
 - Holdout rows: matches from `2022-01-01` onward
 
-Metrics are written to:
+Current v2 holdout metrics:
 
 ```text
-data/processed/model_metrics_v1.json
+Selected model: poisson_regression
+Holdout rows: 4,400
+Holdout home goals MAE: 1.027
+Holdout away goals MAE: 0.840
+Holdout average goals MAE: 0.934
+Holdout rounded exact score accuracy: 0.103
+Holdout rounded match outcome accuracy: 0.561
 ```
+
+For comparison, v1 had holdout match outcome accuracy of about `0.482`, so the Elo features are a meaningful improvement.
 
 ## Outputs
 
-Run:
-
-```powershell
-python src/train_model.py
-```
-
-Output:
+The model writes:
 
 ```text
-data/processed/model_group_predictions_v1.csv
+data/processed/model_group_predictions_v2.csv
+data/processed/model_knockout_predictions_v2.csv
+data/processed/model_predictions_v2.csv
+data/processed/model_metrics_v2.json
 ```
 
-This file matches the group-stage prediction columns expected by the DataCamp workbook.
+`model_group_predictions_v2.csv` and `model_knockout_predictions_v2.csv` match the two DataCamp workbook sections. `model_predictions_v2.csv` combines all 104 matches for local analysis.
 
 ## Known Limitations
 
-- Corners and cards are still constants because the current historical source does not contain corners/card data.
-- Knockout predictions still use the earlier baseline bracket flow.
-- Some 2026 fixture rows involve playoff placeholders or team-name mismatches, so missing team-strength features are filled with training-set median values.
+- Corners and cards are still constants because the current historical source does not contain corners or card data.
+- Playoff placeholders still need real teams once those qualifiers are known.
+- Knockout scores use the same goal model, then resolve tied rounded scorelines as penalty matches.
+- This is a strong first modeling baseline, not a final betting-grade forecast.

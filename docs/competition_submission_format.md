@@ -60,7 +60,7 @@ Prediction columns:
 Run:
 
 ```powershell
-python src/generate_submission.py
+.\.venv\Scripts\python.exe src\generate_submission.py
 ```
 
 Outputs:
@@ -70,3 +70,21 @@ data/processed/group_predictions_baseline.csv
 data/processed/knockout_predictions_baseline.csv
 data/processed/baseline_predictions.csv
 ```
+
+## Local Model Outputs
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe src\train_model.py
+```
+
+Outputs:
+
+```text
+data/processed/model_group_predictions_v2.csv
+data/processed/model_knockout_predictions_v2.csv
+data/processed/model_predictions_v2.csv
+```
+
+For the DataCamp workbook, load `model_group_predictions_v2.csv` into `group_predictions` and `model_knockout_predictions_v2.csv` into `knockout_predictions`.

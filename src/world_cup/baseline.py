@@ -187,6 +187,15 @@ def _resolve_slot(
     return _parse_group_slot(slot_label, standings, used_third_groups)
 
 
+def resolve_knockout_slot(
+    slot_label: str,
+    standings: pd.DataFrame,
+    match_results: dict[int, dict[str, str]],
+    used_third_groups: set[str],
+) -> str:
+    return _resolve_slot(slot_label, standings, match_results, used_third_groups)
+
+
 def _knockout_prediction_row(
     row: object,
     standings: pd.DataFrame,

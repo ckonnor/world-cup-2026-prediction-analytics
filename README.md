@@ -81,10 +81,10 @@ Generate first baseline prediction files:
 python src/generate_submission.py
 ```
 
-Train the first model-driven group-stage scorer:
+Train the model-driven scorer:
 
 ```powershell
-python src/train_model.py
+.\.venv\Scripts\python.exe src\train_model.py
 ```
 
 The workbook-facing baseline outputs are written to:
@@ -100,11 +100,13 @@ The combined analysis output is written to:
 data/processed/baseline_predictions.csv
 ```
 
-The first model-driven output is written to:
+The current model-driven outputs are written to:
 
 ```text
-data/processed/model_group_predictions_v1.csv
-data/processed/model_metrics_v1.json
+data/processed/model_group_predictions_v2.csv
+data/processed/model_knockout_predictions_v2.csv
+data/processed/model_predictions_v2.csv
+data/processed/model_metrics_v2.json
 ```
 
 ## Learning Notes
@@ -115,8 +117,8 @@ Use [docs/competition_submission_format.md](docs/competition_submission_format.m
 
 Use [docs/exploring_the_project.md](docs/exploring_the_project.md) for a hands-on guide to browsing dbt docs, reading models, and querying the DuckDB warehouse.
 
-Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on the first trained model.
+Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on the trained model and how dbt feeds the Python modeling step.
 
 ## Current Status
 
-This repo has a working baseline plus the first historical-data feature layer: raw DataCamp files validate, external international results download reproducibly, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields.
+This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results download reproducibly, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo features to the dbt-built recent-form features and writes a combined 104-match analysis file.
