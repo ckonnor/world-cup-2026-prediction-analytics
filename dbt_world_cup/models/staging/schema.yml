@@ -123,3 +123,30 @@ models:
       - name: shootout_winner
         tests:
           - not_null
+
+  - name: stg_world_cup_squads
+    description: Cleaned 2026 World Cup squad/player table from Wikipedia.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+      - name: player_name
+        tests:
+          - not_null
+      - name: position
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["GK", "DF", "MF", "FW"]
+      - name: age
+        tests:
+          - not_null
+      - name: caps
+        tests:
+          - not_null
+      - name: goals
+        tests:
+          - not_null
+      - name: source_url
+        tests:
+          - not_null

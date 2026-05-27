@@ -40,6 +40,28 @@ Run:
 python src/download_external_data.py
 ```
 
+## 2026 World Cup Squad Tables
+
+Source page:
+
+- Wikipedia: `https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_squads`
+
+Downloaded file:
+
+- `data/raw/external/world_cup_2026_squads.csv`
+
+Run:
+
+```powershell
+python src/download_squad_data.py
+```
+
+Important source-data notes:
+
+- This page changes as federations publish final or preliminary squads.
+- The downloader only captures teams that have an actual player table under their team heading. Teams that have not published squads yet are left out instead of borrowing the next team's table.
+- dbt aggregates the player rows into `main_marts.mart_squad_strength`, which the Python model uses as a conservative post-model star-power adjustment.
+
 ## Fixture Team Resolution
 
 The DataCamp group fixture file was created before all playoff winners were known, so it can contain placeholders such as `UEFA Playoff A` and `FIFA Playoff 1`.

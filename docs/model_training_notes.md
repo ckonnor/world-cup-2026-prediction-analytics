@@ -11,6 +11,7 @@ dbt is responsible for preparing clean, tested analytics tables:
 - `main_staging.stg_group_fixtures`: the 72 known group matches, with stale DataCamp playoff placeholders resolved.
 - `main_staging.stg_knockout_slots`: the 32 bracket slots.
 - `main_staging.stg_international_results`: historical results used by the Python Elo pass.
+- `main_marts.mart_squad_strength`: one row per team with current squad experience and star-power scores when a squad table has been published.
 
 Python then reads those dbt outputs from DuckDB. This is the usual analytics engineering pattern: dbt owns reproducible feature preparation, while Python owns model training and prediction logic.
 
@@ -39,6 +40,15 @@ The model uses:
 - pre-match Elo rating for both teams
 - Elo difference and the Elo expected home result
 
+After the trained model estimates expected goals, Python applies a small capped squad overlay for 2026 matches. This overlay compares each team's squad star-power z-scores:
+
+- overall squad star power
+- attacking star power from goals and top scorers
+- defensive experience from goalkeeper and defender caps
+- total squad experience
+
+This is deliberately a post-model adjustment, not a trained feature, because we do not have historical squad snapshots for every past match. Teams without published squad tables receive no squad adjustment until the source page adds their roster.
+
 dbt resolves known playoff placeholders before prediction and exposes model team names for joins to the historical source. Python keeps a small fallback alias layer for names that can still differ between display and historical data, such as `USA`, `Cabo Verde`, and `Cote d'Ivoire`.
 
 ## Evaluation
@@ -51,11 +61,11 @@ The train/holdout split is time-based:
 Current v2 holdout metrics:
 
 ```text
-Selected model: poisson_regression
+Selected model: hist_gradient_boosting_poisson
 Holdout rows: 4,400
 Holdout home goals MAE: 1.027
 Holdout away goals MAE: 0.840
-Holdout average goals MAE: 0.934
+Holdout average goals MAE: 0.933
 Holdout rounded exact score accuracy: 0.103
 Holdout rounded match outcome accuracy: 0.561
 ```
@@ -78,5 +88,6 @@ data/processed/model_metrics_v2.json
 ## Known Limitations
 
 - Corners and cards are still constants because the current historical source does not contain corners or card data.
+- Squad star power comes from currently published squad tables, so coverage is partial until all teams announce squads.
 - Knockout scores use the same goal model, then resolve tied rounded scorelines as penalty matches.
 - This is a strong first modeling baseline, not a final betting-grade forecast.

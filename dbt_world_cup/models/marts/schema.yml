@@ -58,3 +58,29 @@ models:
       - name: last_10_goal_diff_per_match
         tests:
           - not_null
+
+  - name: mart_squad_strength
+    description: Team-level 2026 squad star-power features built from player caps, goals, age, position, and club metadata.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: squad_players
+        tests:
+          - not_null
+      - name: total_caps
+        tests:
+          - not_null
+      - name: total_goals
+        tests:
+          - not_null
+      - name: attacking_star_power_z
+        tests:
+          - not_null
+      - name: defensive_experience_z
+        tests:
+          - not_null
+      - name: overall_star_power_z
+        tests:
+          - not_null

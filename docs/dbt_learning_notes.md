@@ -24,6 +24,7 @@ Files:
 - `dbt_world_cup/models/staging/stg_knockout_slots.sql`
 - `dbt_world_cup/models/staging/stg_international_results.sql`
 - `dbt_world_cup/models/staging/stg_shootouts.sql`
+- `dbt_world_cup/models/staging/stg_world_cup_squads.sql`
 
 Staging models are thin cleanup layers. They read raw CSVs, rename awkward columns, cast dates, and standardize text.
 
@@ -32,6 +33,8 @@ Example: the raw group file has a `group` column. DuckDB normalizes that to `_gr
 The group fixture staging model also resolves the DataCamp playoff placeholders through the `team_name_resolution` seed. That means the raw CSV still says values like `UEFA Playoff A`, but dbt exposes the current team name, the raw team name, and a historical-source `model_team_name` used for joins. This is the audit trail we want in analytics engineering: do not overwrite raw data; document and test the transformation.
 
 The historical results staging model also shows a common real-world cleanup: the source includes future fixtures with `NA` scores. For prediction training, we only want completed matches, so `stg_international_results` reads `NA` as null and filters out rows without final scores.
+
+`stg_world_cup_squads` stages the downloaded squad player rows. It casts ages, caps, goals, shirt numbers, and timestamps into usable types and keeps one row per player. This is another common staging pattern: keep the source grain intact first, then aggregate later.
 
 ### Intermediate
 
@@ -54,10 +57,13 @@ Files:
 - `dbt_world_cup/models/marts/dim_teams.sql`
 - `dbt_world_cup/models/marts/fct_fixture_schedule.sql`
 - `dbt_world_cup/models/marts/mart_team_strength.sql`
+- `dbt_world_cup/models/marts/mart_squad_strength.sql`
 
 Mart models are analyst-facing tables. `dim_teams` is a dimension table with one row per team. `fct_fixture_schedule` is a fact-style table with one row per match slot.
 
 `mart_team_strength` summarizes each team's recent international form as of the tournament start date. This is the first table that can feed a real prediction model.
+
+`mart_squad_strength` summarizes current squad rows into team-level features: squad size, position counts, total caps, total goals, attacking goals, defensive caps, top-five caps, top-five goals, and standardized star-power scores. This is where dbt changes player-grain data into model-grain data.
 
 ### Features
 
@@ -72,6 +78,8 @@ Feature models are model-ready outputs. The current feature model is intentional
 `features_historical_match_training` is the first supervised-learning table. It has one row per completed historical match, feature columns from each team's prior form, and target columns like `home_score`, `away_score`, and `match_outcome`.
 
 `features_world_cup_group_matches` is the scoring table for the 2026 group stage. It joins group fixtures to the latest team-strength snapshot using the model team names from staging. Because the playoff placeholders are resolved before this join, every group-stage fixture now has team-strength features.
+
+The same feature table also joins squad strength when a team has a published roster. `has_complete_squad_features` is useful when inspecting model inputs because some teams may not have squad data yet.
 
 ## Tests
 

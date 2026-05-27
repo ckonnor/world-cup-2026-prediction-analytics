@@ -56,12 +56,17 @@ TEAM_NAME_ALIASES = {
     "usa": "United States",
     "cabo verde": "Cape Verde",
     "cote d'ivoire": "Ivory Coast",
+    "cote divoire": "Ivory Coast",
     "czechia": "Czech Republic",
     "turkiye": "Turkey",
     "congo dr": "DR Congo",
 }
 DEFAULT_ELO = 1500.0
 HOME_ADVANTAGE_ELO = 60.0
+SQUAD_GOAL_ADJUSTMENT_CAP = 0.35
+SQUAD_OVERALL_WEIGHT = 0.06
+SQUAD_ATTACK_DEFENSE_WEIGHT = 0.07
+SQUAD_EXPERIENCE_WEIGHT = 0.03
 
 
 @dataclass(frozen=True)
@@ -373,6 +378,22 @@ def _team_metric(
     return float(team_row[metric_name])
 
 
+def _squad_metric(
+    team_name: object,
+    metric_name: str,
+    squad_strength_lookup: dict[str, pd.Series],
+) -> float:
+    canonical_name = canonical_team_name(team_name)
+    squad_row = squad_strength_lookup.get(_normalise_text(canonical_name))
+    if squad_row is None:
+        return 0.0
+
+    value = squad_row.get(metric_name, np.nan)
+    if pd.isna(value):
+        return 0.0
+    return float(value)
+
+
 def _elo_rating(team_name: object, models: TrainedGoalModels) -> float:
     return float(models.current_elo_ratings.get(canonical_team_name(team_name), DEFAULT_ELO))
 
@@ -453,11 +474,15 @@ def _prepare_world_cup_match_features(
 def predict_world_cup_group_matches(
     world_cup_matches: pd.DataFrame,
     team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
     models: TrainedGoalModels,
 ) -> pd.DataFrame:
-    features = _prepare_world_cup_match_features(world_cup_matches, team_strength, models)
-    home_expected_goals = models.home_model.predict(features)
-    away_expected_goals = models.away_model.predict(features)
+    home_expected_goals, away_expected_goals = _predict_expected_goals(
+        world_cup_matches,
+        team_strength,
+        squad_strength,
+        models,
+    )
     predicted_home_goals = _rounded_goals(home_expected_goals)
     predicted_away_goals = _rounded_goals(away_expected_goals)
 
@@ -514,10 +539,66 @@ def _normalise_knockout_slots(knockout_slots: pd.DataFrame) -> pd.DataFrame:
 def _predict_expected_goals(
     matches: pd.DataFrame,
     team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
     models: TrainedGoalModels,
 ) -> tuple[np.ndarray, np.ndarray]:
     features = _prepare_world_cup_match_features(matches, team_strength, models)
-    return models.home_model.predict(features), models.away_model.predict(features)
+    home_expected_goals = models.home_model.predict(features)
+    away_expected_goals = models.away_model.predict(features)
+    return _apply_squad_goal_overlay(
+        matches,
+        home_expected_goals,
+        away_expected_goals,
+        squad_strength,
+    )
+
+
+def _apply_squad_goal_overlay(
+    matches: pd.DataFrame,
+    home_expected_goals: np.ndarray,
+    away_expected_goals: np.ndarray,
+    squad_strength: pd.DataFrame,
+) -> tuple[np.ndarray, np.ndarray]:
+    squad_lookup = _team_strength_lookup(squad_strength)
+    adjusted_home_goals = []
+    adjusted_away_goals = []
+
+    for row, base_home_goals, base_away_goals in zip(
+        matches.itertuples(index=False),
+        home_expected_goals,
+        away_expected_goals,
+    ):
+        home_team = _row_team_name_for_model(row, "home")
+        away_team = _row_team_name_for_model(row, "away")
+
+        home_overall = _squad_metric(home_team, "overall_star_power_z", squad_lookup)
+        away_overall = _squad_metric(away_team, "overall_star_power_z", squad_lookup)
+        home_attack = _squad_metric(home_team, "attacking_star_power_z", squad_lookup)
+        away_attack = _squad_metric(away_team, "attacking_star_power_z", squad_lookup)
+        home_defense = _squad_metric(home_team, "defensive_experience_z", squad_lookup)
+        away_defense = _squad_metric(away_team, "defensive_experience_z", squad_lookup)
+        home_experience = _squad_metric(home_team, "experience_score_z", squad_lookup)
+        away_experience = _squad_metric(away_team, "experience_score_z", squad_lookup)
+
+        home_adjustment = np.clip(
+            SQUAD_OVERALL_WEIGHT * (home_overall - away_overall)
+            + SQUAD_ATTACK_DEFENSE_WEIGHT * (home_attack - away_defense)
+            + SQUAD_EXPERIENCE_WEIGHT * (home_experience - away_experience),
+            -SQUAD_GOAL_ADJUSTMENT_CAP,
+            SQUAD_GOAL_ADJUSTMENT_CAP,
+        )
+        away_adjustment = np.clip(
+            SQUAD_OVERALL_WEIGHT * (away_overall - home_overall)
+            + SQUAD_ATTACK_DEFENSE_WEIGHT * (away_attack - home_defense)
+            + SQUAD_EXPERIENCE_WEIGHT * (away_experience - home_experience),
+            -SQUAD_GOAL_ADJUSTMENT_CAP,
+            SQUAD_GOAL_ADJUSTMENT_CAP,
+        )
+
+        adjusted_home_goals.append(max(0.05, float(base_home_goals) + float(home_adjustment)))
+        adjusted_away_goals.append(max(0.05, float(base_away_goals) + float(away_adjustment)))
+
+    return np.array(adjusted_home_goals), np.array(adjusted_away_goals)
 
 
 def _knockout_match_winner(
@@ -548,6 +629,7 @@ def predict_world_cup_knockout_matches(
     knockout_slots: pd.DataFrame,
     group_predictions: pd.DataFrame,
     team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
     models: TrainedGoalModels,
 ) -> pd.DataFrame:
     slots = _normalise_knockout_slots(knockout_slots)
@@ -586,6 +668,7 @@ def predict_world_cup_knockout_matches(
         home_expected_goals, away_expected_goals = _predict_expected_goals(
             match,
             team_strength,
+            squad_strength,
             models,
         )
         home_goals = int(_rounded_goals(home_expected_goals)[0])
@@ -693,14 +776,31 @@ def main() -> None:
     world_cup_matches = _load_table("main_staging.stg_group_fixtures")
     knockout_slots = _load_table("main_staging.stg_knockout_slots")
     team_strength = _load_table("main_marts.mart_team_strength")
+    squad_strength = _load_table("main_marts.mart_squad_strength")
     historical_results = _load_table("main_staging.stg_international_results")
 
     models, metrics = train_goal_models(training_data, historical_results)
-    group_predictions = predict_world_cup_group_matches(world_cup_matches, team_strength, models)
+    metrics["squad_overlay"] = {
+        "enabled": True,
+        "source_table": "main_marts.mart_squad_strength",
+        "teams_with_squad_data": int(squad_strength["team_name"].nunique()),
+        "goal_adjustment_cap": SQUAD_GOAL_ADJUSTMENT_CAP,
+        "method": (
+            "Conservative post-model expected-goals adjustment using squad experience, "
+            "attacking star power, defensive experience, and overall star power z-scores."
+        ),
+    }
+    group_predictions = predict_world_cup_group_matches(
+        world_cup_matches,
+        team_strength,
+        squad_strength,
+        models,
+    )
     knockout_predictions = predict_world_cup_knockout_matches(
         knockout_slots,
         group_predictions,
         team_strength,
+        squad_strength,
         models,
     )
     predictions = build_model_predictions(group_predictions, knockout_predictions)

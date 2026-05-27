@@ -60,6 +60,12 @@ Download historical international results:
 python src/download_external_data.py
 ```
 
+Download currently published World Cup squad tables:
+
+```powershell
+python src/download_squad_data.py
+```
+
 See [docs/data_sources.md](docs/data_sources.md) for source details.
 
 ## Run The Pipeline
@@ -122,4 +128,4 @@ Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on th
 
 ## Current Status
 
-This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results download reproducibly, dbt resolves stale playoff placeholders through a tested seed, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo features to the dbt-built recent-form features and writes a combined 104-match analysis file.
+This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results and currently published squad tables download reproducibly, dbt resolves stale playoff placeholders through a tested seed, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo features to the dbt-built recent-form features, then applies a conservative squad star-power overlay for teams with published roster data.

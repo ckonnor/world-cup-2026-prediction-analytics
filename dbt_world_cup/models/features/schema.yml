@@ -89,3 +89,12 @@ models:
       - name: has_complete_strength_features
         tests:
           - not_null
+      - name: has_home_squad_features
+        tests:
+          - not_null
+      - name: has_away_squad_features
+        tests:
+          - not_null
+      - name: has_complete_squad_features
+        tests:
+          - not_null
