@@ -6,6 +6,8 @@ select
     score_multiplier,
     home_team,
     away_team,
+    home_team_model_name,
+    away_team_model_name,
     match_date_utc,
     venue,
     uses_slot_labels

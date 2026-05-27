@@ -56,6 +56,9 @@ TEAM_NAME_ALIASES = {
     "usa": "United States",
     "cabo verde": "Cape Verde",
     "cote d'ivoire": "Ivory Coast",
+    "czechia": "Czech Republic",
+    "turkiye": "Turkey",
+    "congo dr": "DR Congo",
 }
 DEFAULT_ELO = 1500.0
 HOME_ADVANTAGE_ELO = 60.0
@@ -325,7 +328,7 @@ def train_goal_models(
         "notes": [
             "V2 adds pre-match Elo features computed from historical international results.",
             "The script compares Poisson regression and histogram gradient boosting with Poisson loss.",
-            "Team-name aliases connect fixture names such as USA, Cabo Verde, and Cote d'Ivoire to historical source names.",
+            "dbt resolves known playoff placeholders and exposes model team names for joining to historical source names.",
             "Knockout predictions are resolved from the model-driven group standings and predicted sequentially through the bracket.",
             "Corners and card predictions remain simple constants because the current source data does not include historical corners/cards.",
             "Rows with missing 2026 team-strength or Elo features use training-set median values as a fallback.",
@@ -374,6 +377,15 @@ def _elo_rating(team_name: object, models: TrainedGoalModels) -> float:
     return float(models.current_elo_ratings.get(canonical_team_name(team_name), DEFAULT_ELO))
 
 
+def _row_team_name_for_model(row: object, side: str) -> str:
+    model_attribute = f"{side}_team_model_name"
+    if hasattr(row, model_attribute):
+        model_name = getattr(row, model_attribute)
+        if pd.notna(model_name):
+            return str(model_name)
+    return canonical_team_name(getattr(row, f"{side}_team"))
+
+
 def _prepare_world_cup_match_features(
     matches: pd.DataFrame,
     team_strength: pd.DataFrame,
@@ -383,8 +395,8 @@ def _prepare_world_cup_match_features(
     rows = []
 
     for row in matches.itertuples(index=False):
-        home_team = getattr(row, "home_team")
-        away_team = getattr(row, "away_team")
+        home_team = _row_team_name_for_model(row, "home")
+        away_team = _row_team_name_for_model(row, "away")
         home_elo = _elo_rating(home_team, models)
         away_elo = _elo_rating(away_team, models)
         neutral = _is_neutral_world_cup_match(home_team, away_team)

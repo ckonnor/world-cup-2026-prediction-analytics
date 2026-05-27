@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_group_fixtures
-    description: Cleaned DataCamp group-stage fixture file.
+    description: Cleaned DataCamp group-stage fixture file with playoff placeholders resolved in the dbt layer.
     columns:
       - name: match_id
         description: Unique match identifier.
@@ -16,9 +16,27 @@ models:
           - accepted_values:
               values: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
       - name: home_team
+        description: Display team name after fixture placeholder resolution.
         tests:
           - not_null
       - name: away_team
+        description: Display team name after fixture placeholder resolution.
+        tests:
+          - not_null
+      - name: home_team_raw
+        description: Team value exactly as supplied by the raw DataCamp fixture file.
+        tests:
+          - not_null
+      - name: away_team_raw
+        description: Team value exactly as supplied by the raw DataCamp fixture file.
+        tests:
+          - not_null
+      - name: home_team_model_name
+        description: Team name aligned to the historical results source for feature joins.
+        tests:
+          - not_null
+      - name: away_team_model_name
+        description: Team name aligned to the historical results source for feature joins.
         tests:
           - not_null
       - name: match_date_utc

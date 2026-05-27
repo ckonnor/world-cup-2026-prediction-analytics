@@ -8,7 +8,7 @@ dbt is responsible for preparing clean, tested analytics tables:
 
 - `main_features.features_historical_match_training`: one historical match per row, with prior-form features and target scores.
 - `main_marts.mart_team_strength`: one row per team, with recent form as of the 2026 tournament start.
-- `main_staging.stg_group_fixtures`: the 72 known group matches.
+- `main_staging.stg_group_fixtures`: the 72 known group matches, with stale DataCamp playoff placeholders resolved.
 - `main_staging.stg_knockout_slots`: the 32 bracket slots.
 - `main_staging.stg_international_results`: historical results used by the Python Elo pass.
 
@@ -39,7 +39,7 @@ The model uses:
 - pre-match Elo rating for both teams
 - Elo difference and the Elo expected home result
 
-Small team-name aliases connect fixture names such as `USA`, `Cabo Verde`, and `Cote d'Ivoire` to the historical source names.
+dbt resolves known playoff placeholders before prediction and exposes model team names for joins to the historical source. Python keeps a small fallback alias layer for names that can still differ between display and historical data, such as `USA`, `Cabo Verde`, and `Cote d'Ivoire`.
 
 ## Evaluation
 
@@ -78,6 +78,5 @@ data/processed/model_metrics_v2.json
 ## Known Limitations
 
 - Corners and cards are still constants because the current historical source does not contain corners or card data.
-- Playoff placeholders still need real teams once those qualifiers are known.
 - Knockout scores use the same goal model, then resolve tied rounded scorelines as penalty matches.
 - This is a strong first modeling baseline, not a final betting-grade forecast.

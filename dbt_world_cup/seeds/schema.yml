@@ -1,0 +1,19 @@
+version: 2
+
+seeds:
+  - name: team_name_resolution
+    description: Manual mapping from competition fixture names to resolved display names and historical-source model names.
+    columns:
+      - name: raw_team_name
+        tests:
+          - not_null
+          - unique
+      - name: display_team_name
+        tests:
+          - not_null
+      - name: model_team_name
+        tests:
+          - not_null
+      - name: resolution_type
+        tests:
+          - not_null

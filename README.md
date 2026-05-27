@@ -29,6 +29,7 @@ The goal is practical first: generate a valid baseline submission, then improve 
 |   `-- processed/        # DuckDB database and generated submissions
 |-- dbt_profiles/         # Local dbt profile for DuckDB
 |-- dbt_world_cup/        # dbt project
+|   `-- seeds/            # Small manual lookup tables used by dbt
 |-- docs/                 # Notes and project documentation
 |-- notebooks/            # DataCamp submission notebook draft
 `-- src/                  # Python pipeline code
@@ -121,4 +122,4 @@ Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on th
 
 ## Current Status
 
-This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results download reproducibly, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo features to the dbt-built recent-form features and writes a combined 104-match analysis file.
+This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results download reproducibly, dbt resolves stale playoff placeholders through a tested seed, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo features to the dbt-built recent-form features and writes a combined 104-match analysis file.

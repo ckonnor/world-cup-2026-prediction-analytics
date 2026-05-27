@@ -7,6 +7,8 @@ with group_stage as (
         cast(1 as double) as score_multiplier,
         home_team,
         away_team,
+        home_team_model_name,
+        away_team_model_name,
         match_date_utc,
         venue,
         false as uses_slot_labels
@@ -22,6 +24,8 @@ knockout_stage as (
         score_multiplier,
         slot_home as home_team,
         slot_away as away_team,
+        slot_home as home_team_model_name,
+        slot_away as away_team_model_name,
         match_date_utc,
         venue,
         true as uses_slot_labels

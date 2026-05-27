@@ -29,6 +29,8 @@ Staging models are thin cleanup layers. They read raw CSVs, rename awkward colum
 
 Example: the raw group file has a `group` column. DuckDB normalizes that to `_group`, so the staging model renames it to `group_letter`. This is a classic staging task: hide raw-source weirdness from the rest of the project.
 
+The group fixture staging model also resolves the DataCamp playoff placeholders through the `team_name_resolution` seed. That means the raw CSV still says values like `UEFA Playoff A`, but dbt exposes the current team name, the raw team name, and a historical-source `model_team_name` used for joins. This is the audit trail we want in analytics engineering: do not overwrite raw data; document and test the transformation.
+
 The historical results staging model also shows a common real-world cleanup: the source includes future fixtures with `NA` scores. For prediction training, we only want completed matches, so `stg_international_results` reads `NA` as null and filters out rows without final scores.
 
 ### Intermediate
@@ -69,7 +71,7 @@ Feature models are model-ready outputs. The current feature model is intentional
 
 `features_historical_match_training` is the first supervised-learning table. It has one row per completed historical match, feature columns from each team's prior form, and target columns like `home_score`, `away_score`, and `match_outcome`.
 
-`features_world_cup_group_matches` is the scoring table for the 2026 group stage. It joins group fixtures to the latest team-strength snapshot. Some rows are intentionally incomplete because the competition still has placeholders such as playoff teams; those will need fallback handling in Python.
+`features_world_cup_group_matches` is the scoring table for the 2026 group stage. It joins group fixtures to the latest team-strength snapshot using the model team names from staging. Because the playoff placeholders are resolved before this join, every group-stage fixture now has team-strength features.
 
 ## Tests
 
@@ -86,6 +88,7 @@ The `tests/` folder holds custom SQL tests:
 - `assert_international_results_no_negative_scores.sql`
 - `assert_team_match_results_two_rows_per_match.sql`
 - `assert_shootouts_link_to_results.sql`
+- `assert_group_fixtures_no_unresolved_playoff_placeholders.sql`
 
 In dbt, a test passes when the query returns zero rows. For example, the 72-match test returns a row only if the count is not 72.
 

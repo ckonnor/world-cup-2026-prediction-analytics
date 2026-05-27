@@ -12,6 +12,9 @@ models:
         tests:
           - not_null
           - unique
+      - name: team_model_name
+        tests:
+          - not_null
       - name: group_letter
         tests:
           - not_null
@@ -24,6 +27,12 @@ models:
           - not_null
           - unique
       - name: competition_phase
+        tests:
+          - not_null
+      - name: home_team_model_name
+        tests:
+          - not_null
+      - name: away_team_model_name
         tests:
           - not_null
 

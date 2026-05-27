@@ -19,6 +19,12 @@ models:
       - name: away_team
         tests:
           - not_null
+      - name: home_team_model_name
+        tests:
+          - not_null
+      - name: away_team_model_name
+        tests:
+          - not_null
 
   - name: int_historical_team_match_results
     description: One row per team per historical match, used to build form and strength features.

@@ -39,3 +39,15 @@ Run:
 ```powershell
 python src/download_external_data.py
 ```
+
+## Fixture Team Resolution
+
+The DataCamp group fixture file was created before all playoff winners were known, so it can contain placeholders such as `UEFA Playoff A` and `FIFA Playoff 1`.
+
+This project keeps the raw file unchanged and resolves those names in dbt with:
+
+```text
+dbt_world_cup/seeds/team_name_resolution.csv
+```
+
+The seed stores the raw fixture value, the display team name used in prediction outputs, and the model team name used to join against historical results.

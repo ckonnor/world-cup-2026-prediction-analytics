@@ -33,3 +33,7 @@ models:
     features:
       +materialized: table
       +schema: features
+
+seeds:
+  world_cup:
+    +schema: seeds
