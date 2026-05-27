@@ -100,6 +100,8 @@ Start with [docs/dbt_learning_notes.md](docs/dbt_learning_notes.md) for a walkth
 
 Use [docs/competition_submission_format.md](docs/competition_submission_format.md) to compare the local baseline output with the DataCamp workbook fields.
 
+Use [docs/exploring_the_project.md](docs/exploring_the_project.md) for a hands-on guide to browsing dbt docs, reading models, and querying the DuckDB warehouse.
+
 ## Current Status
 
 This repo has a working baseline plus the first historical-data feature layer: raw DataCamp files validate, external international results download reproducibly, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields.
