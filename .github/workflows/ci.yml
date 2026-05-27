@@ -34,5 +34,8 @@ jobs:
             echo "Skipping dbt build because DataCamp raw files are not committed yet."
           fi
 
+      - name: Run tests
+        run: pytest
+
       - name: Run Python smoke check
         run: python -m compileall src

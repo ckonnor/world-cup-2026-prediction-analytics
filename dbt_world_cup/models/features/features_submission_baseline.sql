@@ -7,28 +7,24 @@ with predictions as (
         score_multiplier,
         home_team,
         away_team,
-        case
-            when competition_phase = 'knockout' then 1
-            else 1
-        end as predicted_home_goals,
-        case
-            when competition_phase = 'knockout' then 0
-            else 1
-        end as predicted_away_goals,
-        5 as predicted_home_corners,
-        4 as predicted_away_corners,
-        2 as predicted_home_yellow_cards,
-        2 as predicted_away_yellow_cards,
-        0 as predicted_home_red_cards,
-        0 as predicted_away_red_cards
+        1 as predicted_home_goals,
+        case when competition_phase = 'knockout' then 0 else 1 end as predicted_away_goals,
+        9 as corners,
+        4 as yellow_cards,
+        0 as red_cards
     from {{ ref('fct_fixture_schedule') }}
 )
 
 select
     *,
     case
+        when competition_phase = 'knockout' then null
         when predicted_home_goals > predicted_away_goals then home_team
         when predicted_away_goals > predicted_home_goals then away_team
-        else 'Draw'
-    end as predicted_result
+        else 'draw'
+    end as winning_team,
+    case when competition_phase = 'knockout' then home_team end as predicted_home_team,
+    case when competition_phase = 'knockout' then away_team end as predicted_away_team,
+    case when competition_phase = 'knockout' then 'home' end as match_winner,
+    case when competition_phase = 'knockout' then false end as penalties
 from predictions

@@ -3,6 +3,8 @@
 Generated outputs live here, including:
 
 - `world_cup.duckdb`
+- `group_predictions_baseline.csv`
+- `knockout_predictions_baseline.csv`
 - `baseline_predictions.csv`
 - future submission files
 

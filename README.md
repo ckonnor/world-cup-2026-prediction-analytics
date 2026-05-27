@@ -7,11 +7,11 @@ The goal is practical first: generate a valid baseline submission, then improve 
 ## Competition Context
 
 - Competition: [Predict the FIFA World Cup 2026](https://app.datacamp.com/learn/competitions/world-cup-prediction)
-- Current visible requirements: predict scores, corners, cards, and knockout outcomes for all 104 matches.
+- Current workbook requirements: predict scores, total corners, total yellow cards, total red cards, group-stage winners, knockout matchups, knockout winners, and penalties for all 104 matches.
 - Starter files shown in DataCamp:
   - `data/group_fixtures.csv`: 72 group stage matches
   - `data/knockout_slots.csv`: 32 knockout round slots
-- Deadline shown publicly: June 11, 2026 at 09:00 UTC.
+- Workbook checklist says to publish before June 10, 2026 at 09:00 UTC. Recheck the DataCamp page before final submission.
 
 ## Project Stack
 
@@ -24,14 +24,14 @@ The goal is practical first: generate a valid baseline submission, then improve 
 
 ```text
 .
-├── data/
-│   ├── raw/              # Competition CSVs and optional external sources
-│   └── processed/        # DuckDB database and generated submissions
-├── dbt_profiles/         # Local dbt profile for DuckDB
-├── dbt_world_cup/        # dbt project
-├── docs/                 # Notes and project documentation
-├── notebooks/            # DataCamp submission notebook draft
-└── src/                  # Python pipeline code
+|-- data/
+|   |-- raw/              # Competition CSVs and optional external sources
+|   `-- processed/        # DuckDB database and generated submissions
+|-- dbt_profiles/         # Local dbt profile for DuckDB
+|-- dbt_world_cup/        # dbt project
+|-- docs/                 # Notes and project documentation
+|-- notebooks/            # DataCamp submission notebook draft
+`-- src/                  # Python pipeline code
 ```
 
 ## Setup
@@ -67,18 +67,31 @@ Build dbt models:
 .\.venv\Scripts\dbt.exe build --project-dir dbt_world_cup --profiles-dir dbt_profiles
 ```
 
-Generate a first baseline prediction file:
+Generate first baseline prediction files:
 
 ```powershell
 python src/generate_submission.py
 ```
 
-The baseline output is written to:
+The workbook-facing baseline outputs are written to:
+
+```text
+data/processed/group_predictions_baseline.csv
+data/processed/knockout_predictions_baseline.csv
+```
+
+The combined analysis output is written to:
 
 ```text
 data/processed/baseline_predictions.csv
 ```
 
+## Learning Notes
+
+Start with [docs/dbt_learning_notes.md](docs/dbt_learning_notes.md) for a walkthrough of the current dbt layers and why each one exists.
+
+Use [docs/competition_submission_format.md](docs/competition_submission_format.md) to compare the local baseline output with the DataCamp workbook fields.
+
 ## Current Status
 
-This repo is scaffolded for the first baseline milestone. The next step is to copy or export the two DataCamp CSV files, run the ingestion check, and inspect the exact submission format from DataCamp before finalizing the submission writer.
+This repo has a working first baseline milestone: raw DataCamp files validate, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields.
