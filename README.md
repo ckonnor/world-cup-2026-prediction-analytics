@@ -81,6 +81,12 @@ Generate first baseline prediction files:
 python src/generate_submission.py
 ```
 
+Train the first model-driven group-stage scorer:
+
+```powershell
+python src/train_model.py
+```
+
 The workbook-facing baseline outputs are written to:
 
 ```text
@@ -94,6 +100,13 @@ The combined analysis output is written to:
 data/processed/baseline_predictions.csv
 ```
 
+The first model-driven output is written to:
+
+```text
+data/processed/model_group_predictions_v1.csv
+data/processed/model_metrics_v1.json
+```
+
 ## Learning Notes
 
 Start with [docs/dbt_learning_notes.md](docs/dbt_learning_notes.md) for a walkthrough of the current dbt layers and why each one exists.
@@ -101,6 +114,8 @@ Start with [docs/dbt_learning_notes.md](docs/dbt_learning_notes.md) for a walkth
 Use [docs/competition_submission_format.md](docs/competition_submission_format.md) to compare the local baseline output with the DataCamp workbook fields.
 
 Use [docs/exploring_the_project.md](docs/exploring_the_project.md) for a hands-on guide to browsing dbt docs, reading models, and querying the DuckDB warehouse.
+
+Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on the first trained model.
 
 ## Current Status
 
