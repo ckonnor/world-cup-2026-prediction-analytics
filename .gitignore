@@ -21,6 +21,7 @@ logs/
 *.duckdb
 *.duckdb.wal
 data/raw/*.csv
+data/raw/**/*.csv
 data/processed/*
 !data/processed/README.md
 

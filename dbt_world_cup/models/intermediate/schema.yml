@@ -19,3 +19,52 @@ models:
       - name: away_team
         tests:
           - not_null
+
+  - name: int_historical_team_match_results
+    description: One row per team per historical match, used to build form and strength features.
+    columns:
+      - name: result_id
+        tests:
+          - not_null
+      - name: match_date
+        tests:
+          - not_null
+      - name: team_name
+        tests:
+          - not_null
+      - name: opponent_name
+        tests:
+          - not_null
+      - name: goals_for
+        tests:
+          - not_null
+      - name: goals_against
+        tests:
+          - not_null
+      - name: match_result
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["win", "draw", "loss"]
+      - name: points
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1, 3]
+              quote: false
+
+  - name: int_team_form_rolling
+    description: Per-team historical match rows with prior-match rolling form metrics.
+    columns:
+      - name: result_id
+        tests:
+          - not_null
+      - name: match_date
+        tests:
+          - not_null
+      - name: team_name
+        tests:
+          - not_null
+      - name: prior_10_matches
+        tests:
+          - not_null

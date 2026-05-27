@@ -53,6 +53,14 @@ data/raw/knockout_slots.csv
 
 See [docs/datacamp_data_access.md](docs/datacamp_data_access.md) for notes on finding those files in DataCamp DataLab.
 
+Download historical international results:
+
+```powershell
+python src/download_external_data.py
+```
+
+See [docs/data_sources.md](docs/data_sources.md) for source details.
+
 ## Run The Pipeline
 
 Validate the expected raw files:
@@ -94,4 +102,4 @@ Use [docs/competition_submission_format.md](docs/competition_submission_format.m
 
 ## Current Status
 
-This repo has a working first baseline milestone: raw DataCamp files validate, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields.
+This repo has a working baseline plus the first historical-data feature layer: raw DataCamp files validate, external international results download reproducibly, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields.

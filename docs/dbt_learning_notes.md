@@ -22,18 +22,28 @@ Files:
 
 - `dbt_world_cup/models/staging/stg_group_fixtures.sql`
 - `dbt_world_cup/models/staging/stg_knockout_slots.sql`
+- `dbt_world_cup/models/staging/stg_international_results.sql`
+- `dbt_world_cup/models/staging/stg_shootouts.sql`
 
 Staging models are thin cleanup layers. They read raw CSVs, rename awkward columns, cast dates, and standardize text.
 
 Example: the raw group file has a `group` column. DuckDB normalizes that to `_group`, so the staging model renames it to `group_letter`. This is a classic staging task: hide raw-source weirdness from the rest of the project.
+
+The historical results staging model also shows a common real-world cleanup: the source includes future fixtures with `NA` scores. For prediction training, we only want completed matches, so `stg_international_results` reads `NA` as null and filters out rows without final scores.
 
 ### Intermediate
 
 File:
 
 - `dbt_world_cup/models/intermediate/int_fixture_slots.sql`
+- `dbt_world_cup/models/intermediate/int_historical_team_match_results.sql`
+- `dbt_world_cup/models/intermediate/int_team_form_rolling.sql`
 
 Intermediate models express business logic that is reusable but not necessarily final reporting output. This model unions group fixtures and knockout slots into one 104-match schedule.
+
+`int_historical_team_match_results` is the first important analytics-engineering reshaping step. The raw results file has one row per match. Most team-strength features need one row per team per match, so this model creates two rows for every match: one from the home team's point of view and one from the away team's point of view.
+
+`int_team_form_rolling` adds prior-match rolling metrics. Notice the word prior: these windows use previous matches only, which avoids leaking the current match result into its own features.
 
 ### Marts
 
@@ -41,8 +51,11 @@ Files:
 
 - `dbt_world_cup/models/marts/dim_teams.sql`
 - `dbt_world_cup/models/marts/fct_fixture_schedule.sql`
+- `dbt_world_cup/models/marts/mart_team_strength.sql`
 
 Mart models are analyst-facing tables. `dim_teams` is a dimension table with one row per team. `fct_fixture_schedule` is a fact-style table with one row per match slot.
+
+`mart_team_strength` summarizes each team's recent international form as of the tournament start date. This is the first table that can feed a real prediction model.
 
 ### Features
 
@@ -64,6 +77,9 @@ The `tests/` folder holds custom SQL tests:
 
 - `assert_group_stage_has_72_matches.sql`
 - `assert_knockout_has_32_slots.sql`
+- `assert_international_results_no_negative_scores.sql`
+- `assert_team_match_results_two_rows_per_match.sql`
+- `assert_shootouts_link_to_results.sql`
 
 In dbt, a test passes when the query returns zero rows. For example, the 72-match test returns a row only if the count is not 72.
 

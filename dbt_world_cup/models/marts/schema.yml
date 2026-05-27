@@ -26,3 +26,26 @@ models:
       - name: competition_phase
         tests:
           - not_null
+
+  - name: mart_team_strength
+    description: Team-level historical strength snapshot as of the 2026 World Cup start date.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: historical_matches
+        tests:
+          - not_null
+      - name: latest_match_date
+        tests:
+          - not_null
+      - name: last_10_matches
+        tests:
+          - not_null
+      - name: last_10_points_per_match
+        tests:
+          - not_null
+      - name: last_10_goal_diff_per_match
+        tests:
+          - not_null

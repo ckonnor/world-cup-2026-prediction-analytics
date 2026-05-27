@@ -16,6 +16,8 @@ clean-targets:
 
 vars:
   raw_data_path: "data/raw"
+  external_raw_data_path: "data/raw/external"
+  tournament_start_date: "2026-06-11"
 
 models:
   world_cup:
