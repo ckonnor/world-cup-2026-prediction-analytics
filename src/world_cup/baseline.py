@@ -77,7 +77,10 @@ def build_group_predictions(group_fixtures: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(predictions)[[*group_fixtures.columns, *GROUP_PREDICTION_COLUMNS]]
 
 
-def build_group_standings(group_predictions: pd.DataFrame) -> pd.DataFrame:
+def build_group_standings(
+    group_predictions: pd.DataFrame,
+    team_tiebreak_strengths: dict[str, float] | None = None,
+) -> pd.DataFrame:
     standings: dict[tuple[str, str], dict[str, object]] = defaultdict(
         lambda: {
             "played": 0,
@@ -126,9 +129,17 @@ def build_group_standings(group_predictions: pd.DataFrame) -> pd.DataFrame:
 
     table = pd.DataFrame(standings.values())
     table["goal_difference"] = table["goals_for"] - table["goals_against"]
+    sort_columns = ["group", "points", "goal_difference", "goals_for"]
+    ascending = [True, False, False, False]
+    if team_tiebreak_strengths is not None:
+        table["_tiebreak_strength"] = table["team"].map(team_tiebreak_strengths).fillna(0.0)
+        sort_columns.append("_tiebreak_strength")
+        ascending.append(False)
+    sort_columns.append("team")
+    ascending.append(True)
     table = table.sort_values(
-        ["group", "points", "goal_difference", "goals_for", "team"],
-        ascending=[True, False, False, False, True],
+        sort_columns,
+        ascending=ascending,
     )
     table["group_rank"] = table.groupby("group").cumcount() + 1
     return table.reset_index(drop=True)
@@ -149,10 +160,14 @@ def _parse_group_slot(slot_label: str, standings: pd.DataFrame, used_third_group
     if best_third_match:
         eligible_groups = best_third_match.group(1).split("/")
         third_place = standings[standings["group_rank"] == 3].copy()
-        third_place = third_place.sort_values(
-            ["points", "goal_difference", "goals_for", "team"],
-            ascending=[False, False, False, True],
-        )
+        sort_columns = ["points", "goal_difference", "goals_for"]
+        ascending = [False, False, False]
+        if "_tiebreak_strength" in third_place.columns:
+            sort_columns.append("_tiebreak_strength")
+            ascending.append(False)
+        sort_columns.append("team")
+        ascending.append(True)
+        third_place = third_place.sort_values(sort_columns, ascending=ascending)
         for row in third_place.itertuples(index=False):
             group_letter = getattr(row, "group")
             if group_letter in eligible_groups and group_letter not in used_third_groups:

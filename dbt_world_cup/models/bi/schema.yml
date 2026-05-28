@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: bi_team_profiles
+    description: Dashboard-ready team profile mart with form, FIFA ranking, squad, event, and external player-strength fields.
+    columns:
+      - name: team_id
+        tests:
+          - not_null
+          - unique
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: team_model_name
+        tests:
+          - not_null
+      - name: group_letter
+        tests:
+          - not_null
+      - name: profile_completeness_score
+        tests:
+          - not_null
+
+  - name: bi_match_feature_context
+    description: Dashboard-ready group-stage match context showing the team-strength features used before Python prediction.
+    columns:
+      - name: match_id
+        tests:
+          - not_null
+          - unique
+      - name: group_letter
+        tests:
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: expected_total_corners
+        tests:
+          - not_null
+      - name: expected_total_yellow_cards
+        tests:
+          - not_null
+      - name: expected_total_red_cards
+        tests:
+          - not_null
+
+  - name: bi_historical_competition_summary
+    description: Dashboard-ready yearly tournament summary for showing model training data coverage and scoring context.
+    columns:
+      - name: match_year
+        tests:
+          - not_null
+      - name: tournament
+        tests:
+          - not_null
+      - name: matches
+        tests:
+          - not_null

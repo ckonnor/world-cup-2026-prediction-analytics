@@ -133,6 +133,9 @@ models:
       - name: player_name
         tests:
           - not_null
+      - name: player_name_key
+        tests:
+          - not_null
       - name: position
         tests:
           - not_null
@@ -148,5 +151,142 @@ models:
         tests:
           - not_null
       - name: source_url
+        tests:
+          - not_null
+
+  - name: stg_footystats_match_stats
+    description: Cleaned FootyStats match-level event data for World Cups and 2026 qualification competitions.
+    columns:
+      - name: source_match_id
+        tests:
+          - not_null
+          - unique
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["qualification", "world_cup"]
+      - name: source_weight
+        tests:
+          - not_null
+      - name: match_date
+        tests:
+          - not_null
+      - name: home_team_name
+        tests:
+          - not_null
+      - name: away_team_name
+        tests:
+          - not_null
+      - name: home_corners
+        tests:
+          - not_null
+      - name: away_corners
+        tests:
+          - not_null
+      - name: home_yellow_cards
+        tests:
+          - not_null
+      - name: away_yellow_cards
+        tests:
+          - not_null
+      - name: home_red_cards
+        tests:
+          - not_null
+      - name: away_red_cards
+        tests:
+          - not_null
+
+  - name: stg_club_player_stats
+    description: Cleaned 2025/26 top-five-league club player statistics from KaggleHub, used for squad card-risk features.
+    columns:
+      - name: player_name
+        tests:
+          - not_null
+      - name: player_name_key
+        tests:
+          - not_null
+      - name: nation_code
+        tests:
+          - not_null
+      - name: competition
+        tests:
+          - not_null
+      - name: minutes
+        tests:
+          - not_null
+      - name: yellow_cards
+        tests:
+          - not_null
+      - name: red_cards
+        tests:
+          - not_null
+
+  - name: stg_fifa_rankings
+    description: Historical and current FIFA men's world rankings normalized to one row per team per ranking date.
+    columns:
+      - name: ranking_date
+        tests:
+          - not_null
+      - name: team_name
+        tests:
+          - not_null
+      - name: country_code
+        tests:
+          - not_null
+      - name: fifa_rank
+        tests:
+          - not_null
+      - name: fifa_points
+        tests:
+          - not_null
+      - name: source_system
+        tests:
+          - not_null
+      - name: source_url
+        tests:
+          - not_null
+
+  - name: stg_international_match_features
+    description: External Kaggle match-feature table with Elo, player aggregate, and form features for historical international matches.
+    columns:
+      - name: match_date
+        tests:
+          - not_null
+      - name: home_team
+        tests:
+          - not_null
+      - name: away_team
+        tests:
+          - not_null
+      - name: home_goals
+        tests:
+          - not_null
+      - name: away_goals
+        tests:
+          - not_null
+      - name: external_home_elo
+        tests:
+          - not_null
+      - name: external_away_elo
+        tests:
+          - not_null
+      - name: source_dataset
+        tests:
+          - not_null
+
+  - name: stg_international_player_aggregates
+    description: External Kaggle country-level EA Sports/FIFA player aggregate ratings by game version.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+      - name: fifa_version
+        tests:
+          - not_null
+      - name: avg_overall
+        tests:
+          - not_null
+      - name: max_overall
         tests:
           - not_null

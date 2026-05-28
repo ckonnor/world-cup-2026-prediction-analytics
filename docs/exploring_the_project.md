@@ -49,6 +49,9 @@ Start with:
 
 - `stg_group_fixtures.sql`
 - `stg_international_results.sql`
+- `stg_fifa_rankings.sql`
+- `stg_footystats_match_stats.sql`
+- `stg_club_player_stats.sql`
 
 ### Intermediate
 
@@ -67,6 +70,9 @@ Start with:
 
 - `int_historical_team_match_results.sql`
 - `int_team_form_rolling.sql`
+- `int_historical_match_rankings.sql`
+- `int_footystats_team_match_events.sql`
+- `int_squad_player_discipline.sql`
 
 ### Marts
 
@@ -84,6 +90,8 @@ Purpose:
 Start with:
 
 - `mart_team_strength.sql`
+- `mart_latest_fifa_rankings.sql`
+- `mart_team_event_profile.sql`
 - `fct_fixture_schedule.sql`
 
 ### Features
@@ -98,6 +106,26 @@ Purpose:
 
 - Create model-ready outputs.
 - This layer will grow when we connect team-strength features to prediction code.
+
+### BI
+
+Folder:
+
+```text
+dbt_world_cup/models/bi/
+```
+
+Purpose:
+
+- Create dashboard-facing tables.
+- Keep visual/reporting tables separate from model-training feature tables.
+- Publish clean inputs for Looker Studio CSV uploads or any other BI tool.
+
+Start with:
+
+- `bi_team_profiles.sql`
+- `bi_match_feature_context.sql`
+- `bi_historical_competition_summary.sql`
 
 ## 3. Query The DuckDB Warehouse
 
@@ -129,11 +157,22 @@ Useful tables to inspect:
 ```text
 main_staging.stg_group_fixtures
 main_staging.stg_international_results
+main_staging.stg_fifa_rankings
 main_intermediate.int_historical_team_match_results
 main_intermediate.int_team_form_rolling
+main_intermediate.int_historical_match_rankings
+main_intermediate.int_footystats_team_match_events
+main_intermediate.int_squad_player_discipline
 main_marts.fct_fixture_schedule
 main_marts.mart_team_strength
+main_marts.mart_squad_strength
+main_marts.mart_team_event_profile
+main_marts.mart_latest_fifa_rankings
 main_features.features_submission_baseline
+main_features.features_world_cup_group_matches
+main_bi.bi_team_profiles
+main_bi.bi_match_feature_context
+main_bi.bi_historical_competition_summary
 ```
 
 ## 4. Use dbt Commands For Learning
@@ -179,6 +218,7 @@ raw CSVs
   -> marts
   -> feature tables
   -> Python predictions
+  -> BI exports
 ```
 
 The most important current dbt learning example is:
@@ -191,3 +231,27 @@ stg_international_results
 ```
 
 That chain shows the core analytics engineering pattern: clean source data, reshape it around the business entity, calculate reusable features, and publish a tested table.
+
+For the new event model, inspect:
+
+```text
+stg_footystats_match_stats
+  -> int_footystats_team_match_events
+  -> mart_team_event_profile
+```
+
+Then compare it to:
+
+```text
+stg_world_cup_squads + stg_club_player_stats
+  -> int_squad_player_discipline
+  -> mart_team_event_profile
+```
+
+For the point-in-time FIFA ranking join:
+
+```text
+stg_fifa_rankings
+  -> int_historical_match_rankings
+  -> features_historical_match_training
+```

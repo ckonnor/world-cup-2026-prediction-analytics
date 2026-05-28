@@ -12,6 +12,10 @@ dbt is responsible for preparing clean, tested analytics tables:
 - `main_staging.stg_knockout_slots`: the 32 bracket slots.
 - `main_staging.stg_international_results`: historical results used by the Python Elo pass.
 - `main_marts.mart_squad_strength`: one row per team with current squad experience and star-power scores when a squad table has been published.
+- `main_marts.mart_team_event_profile`: one row per team with corners and card-risk features.
+- `main_marts.mart_latest_fifa_rankings`: the latest FIFA ranking snapshot for 2026 scoring.
+- `main_staging.stg_international_match_features`: external historical match features with Elo, form, and player aggregate signals.
+- `main_marts.mart_external_player_strength`: latest external country-level player aggregate rating for 2026 scoring.
 
 Python then reads those dbt outputs from DuckDB. This is the usual analytics engineering pattern: dbt owns reproducible feature preparation, while Python owns model training and prediction logic.
 
@@ -37,8 +41,11 @@ The model uses:
 - prior-10-match points, goal difference, goals for, and goals against for both teams
 - home minus away differences for those prior-form features
 - neutral-site flag, including host advantage for Canada, Mexico, and the United States
+- point-in-time FIFA rank and FIFA ranking points for both teams
+- FIFA rank and points differences
 - pre-match Elo rating for both teams
 - Elo difference and the Elo expected home result
+- external match-feature signals for the direct outcome model only: external Elo, EA Sports/FIFA-style player aggregate ratings, and external form fields
 
 After the trained model estimates expected goals, Python applies a small capped squad overlay for 2026 matches. This overlay compares each team's squad star-power z-scores:
 
@@ -51,6 +58,18 @@ This is deliberately a post-model adjustment, not a trained feature, because we 
 
 dbt resolves known playoff placeholders before prediction and exposes model team names for joins to the historical source. Python keeps a small fallback alias layer for names that can still differ between display and historical data, such as `USA`, `Cabo Verde`, and `Cote d'Ivoire`.
 
+The pipeline now trains a separate direct outcome model for `home`, `draw`, and `away`. This outcome model gets the external player aggregate match features, while the goal models keep the cleaner dbt/FIFA/Elo feature set. The final scoreline comes from a blended score grid: Python builds independent Poisson probabilities for every plausible scoreline, then reweights each score by the direct outcome probability for that scoreline's result. The selected score determines the final group-stage `winning_team`, so the output stays internally consistent without letting the classifier force an implausible winner by itself.
+
+The external match-feature source includes context flags such as `is_neutral`, but those flags behaved like fixture-order leakage for neutral tournament matches. The outcome model therefore uses the external strength and form fields, but excludes those external context flags. Model selection and calibration use a 2018-2021 tournament-focused validation slice made from World Cups, continental championships, Nations League-style competitions, and their qualifiers. The direct outcome draw threshold and the blended scoreline weight both use a minimum predicted draw-rate guardrail, which sacrifices a small amount of pure accuracy to avoid unrealistic no-draw tournament forecasts.
+
+Group standings use standard points, goal difference, and goals-for ordering. If teams remain tied after those fields, the prediction pipeline uses model tiebreak strength instead of alphabetical order. This is a proxy for official fair-play or drawing-lots tiebreakers that are not knowable before the tournament.
+
+Corners and cards now come from a separate event profile rather than fixed constants:
+
+- Corners use weighted team-level FootyStats event rates from World Cup qualifiers and recent World Cups.
+- Yellow cards blend team-level international card rates with matched squad-player club discipline from the 2025/26 top-five European leagues.
+- Red cards use the same blended logic, but the final prediction is intentionally conservative because red cards are rare.
+
 ## Evaluation
 
 The train/holdout split is time-based:
@@ -61,16 +80,35 @@ The train/holdout split is time-based:
 Current v2 holdout metrics:
 
 ```text
-Selected model: hist_gradient_boosting_poisson
-Holdout rows: 4,400
-Holdout home goals MAE: 1.027
-Holdout away goals MAE: 0.840
-Holdout average goals MAE: 0.933
-Holdout rounded exact score accuracy: 0.103
-Holdout rounded match outcome accuracy: 0.561
+Selected model: poisson_regression
+Selected outcome model: hist_gradient_boosting_classifier
+Holdout rows: 4,001
+Holdout home goals MAE: 0.985
+Holdout away goals MAE: 0.829
+Holdout average goals MAE: 0.907
+Raw rounded exact score accuracy: 0.106
+Raw rounded match outcome accuracy: 0.550
+Direct outcome accuracy: 0.617
+Blended scoreline outcome accuracy: 0.624
+Blended exact score accuracy: 0.147
+Selected draw threshold: 0.35
+Selected scoreline/outcome blend weight: 0.25
 ```
 
-For comparison, v1 had holdout match outcome accuracy of about `0.482`, so the Elo features are a meaningful improvement.
+For comparison, v1 had holdout match outcome accuracy of about `0.482`. The current direct outcome model is a stronger winner-picking signal than rounded scorelines, though it remains just below the 62% target by strict comparison. The blended Poisson scoreline selector clears the 62% outcome target, keeps exact-score accuracy above the stretch target, and produces a more realistic final outcome distribution than hard-forcing every scoreline to match the classifier's top result.
+
+## Target Metrics
+
+These are working targets for this project, not guarantees. The guardrail is the minimum rating we should try to stay above, the target is the next realistic milestone, and the stretch number is where the model would start looking genuinely strong for a public-data international soccer forecast without betting odds.
+
+| Metric | Current | Guardrail | Target | Stretch | Direction |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Rounded scoreline outcome accuracy | 55.0% | 54.5% | 57.0% | 60.0% | Higher is better |
+| Direct outcome accuracy | 61.7% | 58.0% | 62.0% | 65.0% | Higher is better |
+| Reconciled scoreline exact accuracy | 14.7% | 10.0% | 12.0% | 14.0% | Higher is better |
+| Average goals MAE | 0.907 | 0.950 | 0.900 | 0.860 | Lower is better |
+
+The metrics JSON includes these same target bands under `metric_targets`, with a status for each metric.
 
 ## Outputs
 
@@ -87,7 +125,11 @@ data/processed/model_metrics_v2.json
 
 ## Known Limitations
 
-- Corners and cards are still constants because the current historical source does not contain corners or card data.
+- Club player discipline coverage is strongest for countries with many players in the Premier League, La Liga, Bundesliga, Serie A, and Ligue 1.
+- Corners are still team-level, not player-level, because the competition asks for total match corners and player corner attribution is much less useful for this target.
+- FIFA rankings start in 1992, so the ranking-enhanced training set excludes older historical matches.
+- External player aggregate ratings are a proxy from the Kaggle match-feature dataset, not official current squad ratings.
+- The calibrated scoreline blend still underpredicts draws relative to the historical holdout distribution, but it no longer collapses the tournament forecast into almost all home wins.
 - Squad star power comes from currently published squad tables, so coverage is partial until all teams announce squads.
 - Knockout scores use the same goal model, then resolve tied rounded scorelines as penalty matches.
 - This is a strong first modeling baseline, not a final betting-grade forecast.

@@ -57,6 +57,12 @@ models:
       - name: away_prior_10_matches
         tests:
           - not_null
+      - name: has_complete_fifa_rankings
+        tests:
+          - not_null
+      - name: has_external_match_features
+        tests:
+          - not_null
 
   - name: features_world_cup_group_matches
     description: 2026 group-stage fixtures joined to team-strength features for model scoring.
@@ -96,5 +102,20 @@ models:
         tests:
           - not_null
       - name: has_complete_squad_features
+        tests:
+          - not_null
+      - name: has_complete_event_features
+        tests:
+          - not_null
+      - name: has_complete_fifa_rankings
+        tests:
+          - not_null
+      - name: expected_total_corners
+        tests:
+          - not_null
+      - name: expected_total_yellow_cards
+        tests:
+          - not_null
+      - name: expected_total_red_cards
         tests:
           - not_null

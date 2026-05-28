@@ -24,6 +24,8 @@ data/raw/*.csv
 data/raw/**/*.csv
 data/processed/*
 !data/processed/README.md
+data/bi_exports/*
+!data/bi_exports/README.md
 
 # Environment
 .env

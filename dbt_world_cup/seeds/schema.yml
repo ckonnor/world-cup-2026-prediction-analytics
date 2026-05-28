@@ -17,3 +17,15 @@ seeds:
       - name: resolution_type
         tests:
           - not_null
+
+  - name: team_country_codes
+    description: FIFA/FBref-style three-letter country codes used to join squad players to club player statistics.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: country_code
+        tests:
+          - not_null
+          - unique

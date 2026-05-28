@@ -12,6 +12,9 @@ Generated outputs live here, including:
 - `model_knockout_predictions_v2.csv`
 - `model_predictions_v2.csv`
 - `model_metrics_v2.json`
-- future submission files
+- `submission_group_predictions.csv`
+- `submission_knockout_predictions.csv`
+- `submission_predictions.csv`
+- `submission_validation.json`
 
 These files are ignored by Git because they should be reproducible from raw data and code.

@@ -84,3 +84,63 @@ models:
       - name: overall_star_power_z
         tests:
           - not_null
+
+  - name: mart_team_event_profile
+    description: Team-level corners and card-risk profile built from FootyStats international events and club player discipline matches.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: avg_corners_for
+        tests:
+          - not_null
+      - name: avg_corners_against
+        tests:
+          - not_null
+      - name: blended_yellow_cards_for
+        tests:
+          - not_null
+      - name: blended_red_cards_for
+        tests:
+          - not_null
+      - name: international_event_matches
+        tests:
+          - not_null
+      - name: matched_club_players
+        tests:
+          - not_null
+
+  - name: mart_latest_fifa_rankings
+    description: Latest FIFA men's world ranking snapshot by team.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: ranking_date
+        tests:
+          - not_null
+      - name: fifa_rank
+        tests:
+          - not_null
+      - name: fifa_points
+        tests:
+          - not_null
+
+  - name: mart_external_player_strength
+    description: Latest country-level player aggregate rating from the external international match-feature dataset.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: fifa_version
+        tests:
+          - not_null
+      - name: avg_overall
+        tests:
+          - not_null
+      - name: max_overall
+        tests:
+          - not_null

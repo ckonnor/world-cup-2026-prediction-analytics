@@ -9,9 +9,9 @@ from typing import Callable
 import duckdb
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.linear_model import PoissonRegressor
-from sklearn.metrics import mean_absolute_error
+from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.linear_model import LogisticRegression, PoissonRegressor
+from sklearn.metrics import accuracy_score, mean_absolute_error
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -49,7 +49,53 @@ ELO_FEATURE_COLUMNS = [
     "home_elo_expected_result",
 ]
 
-FEATURE_COLUMNS = [*BASE_FEATURE_COLUMNS, *ELO_FEATURE_COLUMNS]
+FIFA_RANKING_FEATURE_COLUMNS = [
+    "home_fifa_rank",
+    "away_fifa_rank",
+    "home_fifa_points",
+    "away_fifa_points",
+    "fifa_rank_diff",
+    "fifa_points_diff",
+]
+
+FEATURE_COLUMNS = [
+    *BASE_FEATURE_COLUMNS,
+    *FIFA_RANKING_FEATURE_COLUMNS,
+    *ELO_FEATURE_COLUMNS,
+]
+EXTERNAL_OUTCOME_FEATURE_COLUMNS = [
+    "external_home_elo",
+    "external_away_elo",
+    "external_elo_diff",
+    "external_home_avg_overall",
+    "external_home_max_overall",
+    "external_home_avg_attack",
+    "external_home_avg_defense",
+    "external_home_avg_pace",
+    "external_home_avg_shooting",
+    "external_home_avg_passing",
+    "external_away_avg_overall",
+    "external_away_max_overall",
+    "external_away_avg_attack",
+    "external_away_avg_defense",
+    "external_away_avg_pace",
+    "external_away_avg_shooting",
+    "external_away_avg_passing",
+    "external_overall_diff",
+    "external_attack_diff",
+    "external_defense_diff",
+    "external_home_form_scored",
+    "external_home_form_conceded",
+    "external_home_form_win_rate",
+    "external_away_form_scored",
+    "external_away_form_conceded",
+    "external_away_form_win_rate",
+    "has_external_match_features",
+]
+OUTCOME_FEATURE_COLUMNS = [
+    *FEATURE_COLUMNS,
+    *EXTERNAL_OUTCOME_FEATURE_COLUMNS,
+]
 
 HOST_TEAMS = {"Canada", "Mexico", "United States"}
 TEAM_NAME_ALIASES = {
@@ -60,6 +106,10 @@ TEAM_NAME_ALIASES = {
     "czechia": "Czech Republic",
     "turkiye": "Turkey",
     "congo dr": "DR Congo",
+    "bosnia-herzegovina": "Bosnia and Herzegovina",
+    "cape verde islands": "Cape Verde",
+    "ir iran": "Iran",
+    "korea republic": "South Korea",
 }
 DEFAULT_ELO = 1500.0
 HOME_ADVANTAGE_ELO = 60.0
@@ -67,6 +117,71 @@ SQUAD_GOAL_ADJUSTMENT_CAP = 0.35
 SQUAD_OVERALL_WEIGHT = 0.06
 SQUAD_ATTACK_DEFENSE_WEIGHT = 0.07
 SQUAD_EXPERIENCE_WEIGHT = 0.03
+DEFAULT_TOTAL_CORNERS = 9.0
+DEFAULT_TOTAL_YELLOW_CARDS = 4.0
+DEFAULT_TOTAL_RED_CARDS = 0.15
+KNOCKOUT_YELLOW_CARD_ADJUSTMENTS = {
+    "Round of 32": 0.20,
+    "Round of 16": 0.25,
+    "Quarter-final": 0.35,
+    "Semi-final": 0.45,
+    "Third-place playoff": 0.15,
+    "Final": 0.50,
+}
+KNOCKOUT_RED_CARD_ADJUSTMENT_FACTOR = 0.08
+MIN_CALIBRATED_DRAW_RATE = 0.10
+TOURNAMENT_CALIBRATION_START = pd.Timestamp("2018-01-01")
+TOURNAMENT_FOCUSED_TOURNAMENTS = {
+    "AFC Asian Cup",
+    "AFC Asian Cup qualification",
+    "African Cup of Nations",
+    "African Cup of Nations qualification",
+    "CONCACAF Nations League",
+    "CONCACAF Nations League qualification",
+    "Confederations Cup",
+    "Copa América",
+    "FIFA World Cup",
+    "FIFA World Cup qualification",
+    "Gold Cup",
+    "Oceania Nations Cup",
+    "Oceania Nations Cup qualification",
+    "UEFA Euro",
+    "UEFA Euro qualification",
+    "UEFA Nations League",
+}
+SCORELINE_MAX_GOALS = 8
+SCORELINE_BLEND_WEIGHT_CANDIDATES = np.arange(0.0, 1.01, 0.05)
+MIN_OUTCOME_PROBABILITY = 1e-12
+MODEL_METRIC_TARGETS = {
+    "rounded_scoreline_outcome_accuracy": {
+        "direction": "higher",
+        "guardrail": 0.545,
+        "target": 0.57,
+        "stretch": 0.60,
+        "metric_path": ("holdout", "rounded_match_outcome_accuracy"),
+    },
+    "direct_outcome_accuracy": {
+        "direction": "higher",
+        "guardrail": 0.58,
+        "target": 0.62,
+        "stretch": 0.65,
+        "metric_path": ("outcome_holdout", "accuracy"),
+    },
+    "reconciled_scoreline_exact_accuracy": {
+        "direction": "higher",
+        "guardrail": 0.10,
+        "target": 0.12,
+        "stretch": 0.14,
+        "metric_path": ("reconciled_holdout", "exact_score_accuracy"),
+    },
+    "average_goals_mae": {
+        "direction": "lower",
+        "guardrail": 0.95,
+        "target": 0.90,
+        "stretch": 0.86,
+        "metric_path": ("holdout", "average_goals_mae"),
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -79,9 +194,15 @@ class ModelSpec:
 class TrainedGoalModels:
     home_model: object
     away_model: object
+    outcome_model: object
     feature_medians: pd.Series
+    outcome_feature_medians: pd.Series
     current_elo_ratings: dict[str, float]
     selected_model_name: str
+    selected_outcome_model_name: str
+    outcome_classes: np.ndarray
+    draw_probability_threshold: float
+    scoreline_outcome_blend_weight: float
 
 
 def _normalise_text(value: object) -> str:
@@ -188,6 +309,21 @@ def _prepare_training_features(data: pd.DataFrame, feature_columns: list[str]) -
     return features
 
 
+def _is_tournament_focused_match(data: pd.DataFrame) -> pd.Series:
+    return data["tournament"].isin(TOURNAMENT_FOCUSED_TOURNAMENTS)
+
+
+def _tournament_calibration_mask(
+    data: pd.DataFrame,
+    holdout_start: pd.Timestamp,
+) -> pd.Series:
+    return (
+        (data["match_date"] >= TOURNAMENT_CALIBRATION_START)
+        & (data["match_date"] < holdout_start)
+        & _is_tournament_focused_match(data)
+    )
+
+
 def _model_specs() -> list[ModelSpec]:
     return [
         ModelSpec(
@@ -214,8 +350,41 @@ def _model_specs() -> list[ModelSpec]:
     ]
 
 
+def _outcome_model_specs() -> list[ModelSpec]:
+    return [
+        ModelSpec(
+            name="multinomial_logistic_regression",
+            factory=lambda: Pipeline(
+                steps=[
+                    ("scale", StandardScaler()),
+                    (
+                        "logistic",
+                        LogisticRegression(C=0.8, max_iter=1000),
+                    ),
+                ]
+            ),
+        ),
+        ModelSpec(
+            name="hist_gradient_boosting_classifier",
+            factory=lambda: HistGradientBoostingClassifier(
+                learning_rate=0.04,
+                max_iter=250,
+                max_leaf_nodes=15,
+                min_samples_leaf=40,
+                l2_regularization=0.1,
+                random_state=42,
+            ),
+        ),
+    ]
+
+
 def _rounded_goals(predictions: np.ndarray) -> np.ndarray:
     return np.clip(np.rint(predictions), 0, 8).astype(int)
+
+
+def _poisson_log_probability(goals: int, expected_goals: float) -> float:
+    expected_goals = max(float(expected_goals), 0.05)
+    return -expected_goals + goals * math.log(expected_goals) - math.lgamma(goals + 1)
 
 
 def outcome_from_scores(home_goals: int, away_goals: int) -> str:
@@ -224,6 +393,96 @@ def outcome_from_scores(home_goals: int, away_goals: int) -> str:
     if away_goals > home_goals:
         return "away"
     return "draw"
+
+
+def outcome_from_probabilities(
+    probabilities: np.ndarray,
+    classes: np.ndarray,
+    draw_probability_threshold: float,
+) -> str:
+    class_indexes = {class_name: index for index, class_name in enumerate(classes)}
+    draw_probability = probabilities[class_indexes["draw"]]
+    if draw_probability >= draw_probability_threshold:
+        return "draw"
+    return (
+        "home"
+        if probabilities[class_indexes["home"]] >= probabilities[class_indexes["away"]]
+        else "away"
+    )
+
+
+def _outcomes_from_probabilities(
+    probabilities: np.ndarray,
+    classes: np.ndarray,
+    draw_probability_threshold: float,
+) -> np.ndarray:
+    return np.array(
+        [
+            outcome_from_probabilities(row, classes, draw_probability_threshold)
+            for row in probabilities
+        ]
+    )
+
+
+def _outcome_probability_lookup(
+    probabilities: np.ndarray,
+    classes: np.ndarray,
+) -> dict[str, float]:
+    return {
+        str(class_name): max(float(probabilities[index]), MIN_OUTCOME_PROBABILITY)
+        for index, class_name in enumerate(classes)
+    }
+
+
+def _select_blended_scoreline(
+    home_expected_goals: float,
+    away_expected_goals: float,
+    outcome_probabilities: np.ndarray,
+    classes: np.ndarray,
+    outcome_blend_weight: float,
+) -> tuple[int, int]:
+    rounded_home = int(_rounded_goals(np.array([home_expected_goals]))[0])
+    rounded_away = int(_rounded_goals(np.array([away_expected_goals]))[0])
+    outcome_probability_by_class = _outcome_probability_lookup(outcome_probabilities, classes)
+    outcome_blend_weight = float(np.clip(outcome_blend_weight, 0.0, 1.0))
+    goal_blend_weight = 1.0 - outcome_blend_weight
+
+    candidates = []
+    for home_goals in range(0, SCORELINE_MAX_GOALS + 1):
+        for away_goals in range(0, SCORELINE_MAX_GOALS + 1):
+            outcome = outcome_from_scores(home_goals, away_goals)
+            scoreline_log_probability = _poisson_log_probability(
+                home_goals,
+                home_expected_goals,
+            ) + _poisson_log_probability(
+                away_goals,
+                away_expected_goals,
+            )
+            outcome_log_probability = math.log(outcome_probability_by_class[outcome])
+            blended_log_probability = (
+                goal_blend_weight * scoreline_log_probability
+                + outcome_blend_weight * outcome_log_probability
+            )
+            squared_error = (
+                (home_goals - home_expected_goals) ** 2
+                + (away_goals - away_expected_goals) ** 2
+            )
+            total_goal_distance = abs(
+                (home_goals + away_goals) - (rounded_home + rounded_away)
+            )
+            candidates.append(
+                (
+                    blended_log_probability,
+                    scoreline_log_probability,
+                    -squared_error,
+                    -total_goal_distance,
+                    home_goals,
+                    away_goals,
+                )
+            )
+
+    _, _, _, _, home_goals, away_goals = max(candidates)
+    return int(home_goals), int(away_goals)
 
 
 def _score_predictions(
@@ -265,33 +524,304 @@ def _score_predictions(
     }
 
 
-def _fit_and_score_spec(
+def _fit_goal_models(
     spec: ModelSpec,
-    train: pd.DataFrame,
-    holdout: pd.DataFrame,
-) -> tuple[object, object, dict[str, object]]:
-    train_features = _prepare_training_features(train, FEATURE_COLUMNS)
-    holdout_features = _prepare_training_features(holdout, FEATURE_COLUMNS)
-
+    frame: pd.DataFrame,
+) -> tuple[object, object]:
+    features = _prepare_training_features(frame, FEATURE_COLUMNS)
     home_model = spec.factory()
     away_model = spec.factory()
-    home_model.fit(train_features, train["home_score"])
-    away_model.fit(train_features, train["away_score"])
+    home_model.fit(features, frame["home_score"])
+    away_model.fit(features, frame["away_score"])
+    return home_model, away_model
+
+
+def _score_goal_models(
+    frame: pd.DataFrame,
+    home_model: object,
+    away_model: object,
+) -> dict[str, float]:
+    features = _prepare_training_features(frame, FEATURE_COLUMNS)
+    return _score_predictions(
+        frame,
+        home_model.predict(features),
+        away_model.predict(features),
+    )
+
+
+def _fit_and_score_spec(
+    spec: ModelSpec,
+    fitting: pd.DataFrame,
+    calibration: pd.DataFrame,
+    holdout: pd.DataFrame,
+) -> tuple[object, object, dict[str, object]]:
+    home_model, away_model = _fit_goal_models(spec, fitting)
 
     metrics = {
         "model_type": spec.name,
-        "training": _score_predictions(
-            train,
-            home_model.predict(train_features),
-            away_model.predict(train_features),
-        ),
-        "holdout": _score_predictions(
-            holdout,
-            home_model.predict(holdout_features),
-            away_model.predict(holdout_features),
-        ),
+        "fitting": _score_goal_models(fitting, home_model, away_model),
+        "calibration": _score_goal_models(calibration, home_model, away_model),
+        "holdout": _score_goal_models(holdout, home_model, away_model),
     }
     return home_model, away_model, metrics
+
+
+def _best_draw_probability_threshold(
+    actual_outcomes: pd.Series,
+    probabilities: np.ndarray,
+    classes: np.ndarray,
+) -> float:
+    candidate_thresholds = np.arange(0.20, 0.61, 0.01)
+    scored_thresholds = []
+    for threshold in candidate_thresholds:
+        predictions = _outcomes_from_probabilities(probabilities, classes, float(threshold))
+        draw_rate = float(np.mean(predictions == "draw"))
+        scored_thresholds.append(
+            (
+                accuracy_score(actual_outcomes, predictions),
+                draw_rate,
+                float(threshold),
+            )
+        )
+
+    calibrated_thresholds = [
+        item for item in scored_thresholds if item[1] >= MIN_CALIBRATED_DRAW_RATE
+    ]
+    if calibrated_thresholds:
+        return max(calibrated_thresholds, key=lambda item: (item[0], item[2]))[2]
+
+    return max(scored_thresholds, key=lambda item: (item[0], item[2]))[2]
+
+
+def _score_outcome_predictions(
+    frame: pd.DataFrame,
+    probabilities: np.ndarray,
+    classes: np.ndarray,
+    draw_probability_threshold: float,
+) -> dict[str, object]:
+    predictions = _outcomes_from_probabilities(
+        probabilities,
+        classes,
+        draw_probability_threshold,
+    )
+    return {
+        "rows": int(len(frame)),
+        "accuracy": float(accuracy_score(frame["match_outcome"], predictions)),
+        "actual_distribution": {
+            key: float(value)
+            for key, value in frame["match_outcome"].value_counts(normalize=True).items()
+        },
+        "predicted_distribution": {
+            key: float(value)
+            for key, value in pd.Series(predictions).value_counts(normalize=True).items()
+        },
+    }
+
+
+def _score_reconciled_predictions(
+    frame: pd.DataFrame,
+    home_predictions: np.ndarray,
+    away_predictions: np.ndarray,
+    outcome_probabilities: np.ndarray,
+    classes: np.ndarray,
+    scoreline_outcome_blend_weight: float,
+) -> dict[str, object]:
+    reconciled_scores = [
+        _select_blended_scoreline(
+            float(home),
+            float(away),
+            probabilities,
+            classes,
+            scoreline_outcome_blend_weight,
+        )
+        for home, away, probabilities in zip(
+            home_predictions,
+            away_predictions,
+            outcome_probabilities,
+        )
+    ]
+    predicted_home_goals = np.array([score[0] for score in reconciled_scores])
+    predicted_away_goals = np.array([score[1] for score in reconciled_scores])
+    predicted_outcomes = np.array(
+        [
+            outcome_from_scores(int(home), int(away))
+            for home, away in zip(predicted_home_goals, predicted_away_goals)
+        ]
+    )
+    actual_home_goals = frame["home_score"].to_numpy()
+    actual_away_goals = frame["away_score"].to_numpy()
+
+    return {
+        "rows": int(len(frame)),
+        "scoreline_outcome_blend_weight": float(scoreline_outcome_blend_weight),
+        "exact_score_accuracy": float(
+            np.mean(
+                (predicted_home_goals == actual_home_goals)
+                & (predicted_away_goals == actual_away_goals)
+            )
+        ),
+        "match_outcome_accuracy": float(
+            accuracy_score(frame["match_outcome"], predicted_outcomes)
+        ),
+        "predicted_distribution": {
+            key: float(value)
+            for key, value in pd.Series(predicted_outcomes).value_counts(normalize=True).items()
+        },
+    }
+
+
+def _best_scoreline_outcome_blend_weight(
+    frame: pd.DataFrame,
+    home_predictions: np.ndarray,
+    away_predictions: np.ndarray,
+    outcome_probabilities: np.ndarray,
+    classes: np.ndarray,
+) -> tuple[float, list[dict[str, float]]]:
+    scored_weights = []
+    for weight in SCORELINE_BLEND_WEIGHT_CANDIDATES:
+        metrics = _score_reconciled_predictions(
+            frame,
+            home_predictions,
+            away_predictions,
+            outcome_probabilities,
+            classes,
+            float(weight),
+        )
+        predicted_draw_rate = float(metrics["predicted_distribution"].get("draw", 0.0))
+        scored_weights.append(
+            {
+                "scoreline_outcome_blend_weight": float(weight),
+                "exact_score_accuracy": float(metrics["exact_score_accuracy"]),
+                "match_outcome_accuracy": float(metrics["match_outcome_accuracy"]),
+                "predicted_draw_rate": predicted_draw_rate,
+            }
+        )
+
+    calibrated_weights = [
+        item
+        for item in scored_weights
+        if item["predicted_draw_rate"] >= MIN_CALIBRATED_DRAW_RATE
+    ]
+    eligible_weights = calibrated_weights or scored_weights
+    selected_weight = max(
+        eligible_weights,
+        key=lambda item: (
+            item["match_outcome_accuracy"],
+            item["exact_score_accuracy"],
+            -item["scoreline_outcome_blend_weight"],
+        ),
+    )
+    return float(selected_weight["scoreline_outcome_blend_weight"]), scored_weights
+
+
+def _metric_target_status(
+    value: float,
+    direction: str,
+    guardrail: float,
+    target: float,
+    stretch: float,
+) -> str:
+    if direction == "higher":
+        if value >= stretch:
+            return "stretch"
+        if value >= target:
+            return "target"
+        if value >= guardrail:
+            return "guardrail"
+        return "below_guardrail"
+
+    if value <= stretch:
+        return "stretch"
+    if value <= target:
+        return "target"
+    if value <= guardrail:
+        return "guardrail"
+    return "below_guardrail"
+
+
+def _metric_value(metrics: dict[str, object], path: tuple[str, str]) -> float:
+    section = metrics[path[0]]
+    if not isinstance(section, dict):
+        raise TypeError(f"Metric section {path[0]} is not a dictionary.")
+    return float(section[path[1]])
+
+
+def _build_metric_target_report(metrics: dict[str, object]) -> dict[str, dict[str, object]]:
+    report = {}
+    for metric_name, target_config in MODEL_METRIC_TARGETS.items():
+        value = _metric_value(metrics, target_config["metric_path"])
+        report[metric_name] = {
+            "current": value,
+            "direction": target_config["direction"],
+            "guardrail": target_config["guardrail"],
+            "target": target_config["target"],
+            "stretch": target_config["stretch"],
+            "status": _metric_target_status(
+                value,
+                str(target_config["direction"]),
+                float(target_config["guardrail"]),
+                float(target_config["target"]),
+                float(target_config["stretch"]),
+            ),
+        }
+    return report
+
+
+def _fit_and_score_outcome_spec(
+    spec: ModelSpec,
+    fitting: pd.DataFrame,
+    calibration: pd.DataFrame,
+    holdout: pd.DataFrame,
+    outcome_feature_medians: pd.Series,
+) -> tuple[object, np.ndarray, float, dict[str, object]]:
+    fitting_features = _prepare_training_features(
+        fitting,
+        OUTCOME_FEATURE_COLUMNS,
+    ).fillna(outcome_feature_medians)
+    calibration_features = _prepare_training_features(
+        calibration,
+        OUTCOME_FEATURE_COLUMNS,
+    ).fillna(outcome_feature_medians)
+    holdout_features = _prepare_training_features(
+        holdout,
+        OUTCOME_FEATURE_COLUMNS,
+    ).fillna(outcome_feature_medians)
+
+    outcome_model = spec.factory()
+    outcome_model.fit(fitting_features, fitting["match_outcome"])
+    classes = outcome_model.classes_
+    fitting_probabilities = outcome_model.predict_proba(fitting_features)
+    calibration_probabilities = outcome_model.predict_proba(calibration_features)
+    holdout_probabilities = outcome_model.predict_proba(holdout_features)
+    draw_probability_threshold = _best_draw_probability_threshold(
+        calibration["match_outcome"],
+        calibration_probabilities,
+        classes,
+    )
+
+    metrics = {
+        "model_type": spec.name,
+        "draw_probability_threshold": draw_probability_threshold,
+        "fitting": _score_outcome_predictions(
+            fitting,
+            fitting_probabilities,
+            classes,
+            draw_probability_threshold,
+        ),
+        "calibration": _score_outcome_predictions(
+            calibration,
+            calibration_probabilities,
+            classes,
+            draw_probability_threshold,
+        ),
+        "holdout": _score_outcome_predictions(
+            holdout,
+            holdout_probabilities,
+            classes,
+            draw_probability_threshold,
+        ),
+    }
+    return outcome_model, classes, draw_probability_threshold, metrics
 
 
 def train_goal_models(
@@ -302,51 +832,263 @@ def train_goal_models(
     model_data = training_data.merge(elo_features, on="result_id", how="inner")
     model_data = model_data.dropna(subset=FEATURE_COLUMNS + ["home_score", "away_score"]).copy()
     model_data["match_date"] = pd.to_datetime(model_data["match_date"])
+    model_data = model_data.sort_values(["match_date", "result_id"]).reset_index(drop=True)
 
     holdout_start = pd.Timestamp("2022-01-01")
     train = model_data[model_data["match_date"] < holdout_start]
     holdout = model_data[model_data["match_date"] >= holdout_start]
+    calibration_mask = _tournament_calibration_mask(train, holdout_start)
+    calibration = train[calibration_mask]
+    fitting = train[~calibration_mask]
 
-    if train.empty or holdout.empty:
-        raise ValueError("Training and holdout sets must both contain rows.")
+    if fitting.empty or calibration.empty or holdout.empty:
+        raise ValueError("Fitting, calibration, and holdout sets must all contain rows.")
 
     candidate_results = []
     for spec in _model_specs():
-        home_model, away_model, metrics = _fit_and_score_spec(spec, train, holdout)
-        candidate_results.append((home_model, away_model, metrics))
+        home_model, away_model, metrics = _fit_and_score_spec(
+            spec,
+            fitting,
+            calibration,
+            holdout,
+        )
+        candidate_results.append((spec, home_model, away_model, metrics))
 
-    selected_home_model, selected_away_model, selected_metrics = min(
+    selected_goal_spec, selected_calibration_home_model, selected_calibration_away_model, selected_calibration_metrics = min(
         candidate_results,
-        key=lambda item: item[2]["holdout"]["average_goals_mae"],
+        key=lambda item: item[3]["calibration"]["average_goals_mae"],
     )
+    calibration_goal_features = _prepare_training_features(calibration, FEATURE_COLUMNS)
+    selected_calibration_home_predictions = selected_calibration_home_model.predict(
+        calibration_goal_features,
+    )
+    selected_calibration_away_predictions = selected_calibration_away_model.predict(
+        calibration_goal_features,
+    )
+
+    outcome_candidate_results = []
+    outcome_feature_medians = _prepare_training_features(
+        fitting,
+        OUTCOME_FEATURE_COLUMNS,
+    ).median(numeric_only=True)
+    calibration_outcome_features = _prepare_training_features(
+        calibration,
+        OUTCOME_FEATURE_COLUMNS,
+    ).fillna(outcome_feature_medians)
+    for spec in _outcome_model_specs():
+        outcome_model, outcome_classes, draw_threshold, outcome_metrics = (
+            _fit_and_score_outcome_spec(
+                spec,
+                fitting,
+                calibration,
+                holdout,
+                outcome_feature_medians,
+            )
+        )
+        calibration_outcome_probabilities = outcome_model.predict_proba(
+            calibration_outcome_features,
+        )
+        scoreline_blend_weight, scoreline_blend_candidates = (
+            _best_scoreline_outcome_blend_weight(
+                calibration,
+                selected_calibration_home_predictions,
+                selected_calibration_away_predictions,
+                calibration_outcome_probabilities,
+                outcome_classes,
+            )
+        )
+        scoreline_calibration_metrics = _score_reconciled_predictions(
+            calibration,
+            selected_calibration_home_predictions,
+            selected_calibration_away_predictions,
+            calibration_outcome_probabilities,
+            outcome_classes,
+            scoreline_blend_weight,
+        )
+        outcome_metrics["scoreline_outcome_blend_weight"] = scoreline_blend_weight
+        outcome_metrics["scoreline_blend_candidates"] = scoreline_blend_candidates
+        outcome_metrics["scoreline_calibration"] = scoreline_calibration_metrics
+        outcome_candidate_results.append(
+            (
+                spec,
+                outcome_model,
+                outcome_classes,
+                draw_threshold,
+                outcome_metrics,
+                scoreline_blend_weight,
+                scoreline_blend_candidates,
+                scoreline_calibration_metrics,
+            )
+        )
+
+    (
+        selected_outcome_spec,
+        selected_calibration_outcome_model,
+        selected_outcome_classes,
+        selected_draw_threshold,
+        selected_calibration_outcome_metrics,
+        selected_scoreline_outcome_blend_weight,
+        scoreline_blend_candidates,
+        calibration_reconciled_metrics,
+    ) = max(
+        outcome_candidate_results,
+        key=lambda item: (
+            item[7]["match_outcome_accuracy"],
+            item[7]["exact_score_accuracy"],
+            item[4]["calibration"]["accuracy"],
+        ),
+    )
+
+    selected_home_model, selected_away_model = _fit_goal_models(selected_goal_spec, train)
     train_features = _prepare_training_features(train, FEATURE_COLUMNS)
+    outcome_feature_medians = _prepare_training_features(
+        train,
+        OUTCOME_FEATURE_COLUMNS,
+    ).median(numeric_only=True)
+    selected_train_outcome_features = _prepare_training_features(
+        train,
+        OUTCOME_FEATURE_COLUMNS,
+    ).fillna(outcome_feature_medians)
+    selected_outcome_model = selected_outcome_spec.factory()
+    selected_outcome_model.fit(selected_train_outcome_features, train["match_outcome"])
+    selected_outcome_classes = selected_outcome_model.classes_
+
+    selected_train_goal_features = _prepare_training_features(train, FEATURE_COLUMNS)
+    selected_holdout_goal_features = _prepare_training_features(holdout, FEATURE_COLUMNS)
+    selected_holdout_outcome_features = _prepare_training_features(
+        holdout,
+        OUTCOME_FEATURE_COLUMNS,
+    ).fillna(outcome_feature_medians)
+    selected_train_home_predictions = selected_home_model.predict(selected_train_goal_features)
+    selected_train_away_predictions = selected_away_model.predict(selected_train_goal_features)
+    selected_train_outcome_probabilities = selected_outcome_model.predict_proba(
+        selected_train_outcome_features,
+    )
+    selected_holdout_home_predictions = selected_home_model.predict(
+        selected_holdout_goal_features,
+    )
+    selected_holdout_away_predictions = selected_away_model.predict(
+        selected_holdout_goal_features,
+    )
+    selected_holdout_outcome_probabilities = selected_outcome_model.predict_proba(
+        selected_holdout_outcome_features,
+    )
+    selected_metrics = {
+        "model_type": selected_goal_spec.name,
+        "training": _score_predictions(
+            train,
+            selected_train_home_predictions,
+            selected_train_away_predictions,
+        ),
+        "holdout": _score_predictions(
+            holdout,
+            selected_holdout_home_predictions,
+            selected_holdout_away_predictions,
+        ),
+    }
+    selected_outcome_metrics = {
+        "model_type": selected_outcome_spec.name,
+        "draw_probability_threshold": selected_draw_threshold,
+        "training": _score_outcome_predictions(
+            train,
+            selected_train_outcome_probabilities,
+            selected_outcome_classes,
+            selected_draw_threshold,
+        ),
+        "holdout": _score_outcome_predictions(
+            holdout,
+            selected_holdout_outcome_probabilities,
+            selected_outcome_classes,
+            selected_draw_threshold,
+        ),
+    }
+    reconciled_training_metrics = _score_reconciled_predictions(
+        train,
+        selected_train_home_predictions,
+        selected_train_away_predictions,
+        selected_train_outcome_probabilities,
+        selected_outcome_classes,
+        selected_scoreline_outcome_blend_weight,
+    )
+    reconciled_holdout_metrics = _score_reconciled_predictions(
+        holdout,
+        selected_holdout_home_predictions,
+        selected_holdout_away_predictions,
+        selected_holdout_outcome_probabilities,
+        selected_outcome_classes,
+        selected_scoreline_outcome_blend_weight,
+    )
 
     metrics = {
         "model_version": "v2",
         "selected_model_type": selected_metrics["model_type"],
-        "selection_metric": "holdout.average_goals_mae",
+        "selection_metric": "tournament_calibration.average_goals_mae",
+        "selected_outcome_model_type": selected_outcome_metrics["model_type"],
+        "outcome_selection_metric": "tournament_calibration.blended_scoreline_outcome_accuracy",
+        "draw_probability_threshold": selected_draw_threshold,
+        "scoreline_outcome_blend_weight": selected_scoreline_outcome_blend_weight,
+        "scoreline_blend_selection_metric": (
+            "tournament_calibration.match_outcome_accuracy with a minimum predicted draw-rate guardrail"
+        ),
         "holdout_start": str(holdout_start.date()),
+        "tournament_calibration": {
+            "start": str(TOURNAMENT_CALIBRATION_START.date()),
+            "end": str((holdout_start - pd.Timedelta(days=1)).date()),
+            "rows": int(len(calibration)),
+            "fitting_rows": int(len(fitting)),
+            "tournaments": {
+                str(key): int(value)
+                for key, value in calibration["tournament"].value_counts().items()
+            },
+            "actual_distribution": {
+                key: float(value)
+                for key, value in calibration["match_outcome"]
+                .value_counts(normalize=True)
+                .items()
+            },
+            "selected_goal_model": selected_calibration_metrics,
+            "selected_outcome_model": selected_calibration_outcome_metrics,
+            "selected_scoreline_blend": calibration_reconciled_metrics,
+        },
         "feature_columns": FEATURE_COLUMNS,
-        "candidate_models": [result[2] for result in candidate_results],
+        "outcome_feature_columns": OUTCOME_FEATURE_COLUMNS,
+        "candidate_models": [result[3] for result in candidate_results],
+        "candidate_outcome_models": [result[4] for result in outcome_candidate_results],
+        "scoreline_blend_candidates": scoreline_blend_candidates,
         "training": selected_metrics["training"],
         "holdout": selected_metrics["holdout"],
+        "outcome_training": selected_outcome_metrics["training"],
+        "outcome_holdout": selected_outcome_metrics["holdout"],
+        "reconciled_training": reconciled_training_metrics,
+        "reconciled_holdout": reconciled_holdout_metrics,
         "notes": [
-            "V2 adds pre-match Elo features computed from historical international results.",
+            "V2 adds pre-match Elo features computed from historical international results and point-in-time FIFA ranking features.",
             "The script compares Poisson regression and histogram gradient boosting with Poisson loss.",
+            "A direct outcome classifier chooses home/draw/away using dbt features plus external player aggregate match features.",
+            "External match context flags are excluded from the outcome model because they behaved like fixture-order leakage for neutral tournament rows.",
+            f"Draw threshold and scoreline blend selection use a 2018-2021 tournament-focused calibration slice with at least a {MIN_CALIBRATED_DRAW_RATE:.0%} predicted draw rate when such a setting is available.",
+            "Final scorelines use a calibrated blend of independent Poisson score likelihood and direct outcome probabilities.",
             "dbt resolves known playoff placeholders and exposes model team names for joining to historical source names.",
             "Knockout predictions are resolved from the model-driven group standings and predicted sequentially through the bracket.",
-            "Corners and card predictions remain simple constants because the current source data does not include historical corners/cards.",
+            "Corners and card predictions use a dbt-built event profile from FootyStats international events and club player discipline stats.",
             "Rows with missing 2026 team-strength or Elo features use training-set median values as a fallback.",
         ],
     }
+    metrics["metric_targets"] = _build_metric_target_report(metrics)
 
     return (
         TrainedGoalModels(
             home_model=selected_home_model,
             away_model=selected_away_model,
+            outcome_model=selected_outcome_model,
             feature_medians=train_features.median(numeric_only=True),
+            outcome_feature_medians=outcome_feature_medians,
             current_elo_ratings=current_elo_ratings,
             selected_model_name=selected_metrics["model_type"],
+            selected_outcome_model_name=selected_outcome_metrics["model_type"],
+            outcome_classes=selected_outcome_classes,
+            draw_probability_threshold=selected_draw_threshold,
+            scoreline_outcome_blend_weight=selected_scoreline_outcome_blend_weight,
         ),
         metrics,
     )
@@ -394,8 +1136,143 @@ def _squad_metric(
     return float(value)
 
 
+def _event_defaults(team_event_profile: pd.DataFrame) -> dict[str, float]:
+    defaults = {
+        "avg_corners_for": DEFAULT_TOTAL_CORNERS / 2,
+        "avg_corners_against": DEFAULT_TOTAL_CORNERS / 2,
+        "blended_yellow_cards_for": DEFAULT_TOTAL_YELLOW_CARDS / 2,
+        "avg_yellow_cards_against": DEFAULT_TOTAL_YELLOW_CARDS / 2,
+        "blended_red_cards_for": DEFAULT_TOTAL_RED_CARDS / 2,
+        "avg_red_cards_against": DEFAULT_TOTAL_RED_CARDS / 2,
+    }
+    for metric_name in defaults:
+        if metric_name in team_event_profile.columns:
+            metric_values = pd.to_numeric(team_event_profile[metric_name], errors="coerce")
+            if metric_values.notna().any():
+                defaults[metric_name] = float(metric_values.mean())
+    return defaults
+
+
+def _event_metric(
+    team_name: object,
+    metric_name: str,
+    team_event_lookup: dict[str, pd.Series],
+    defaults: dict[str, float],
+) -> float:
+    canonical_name = canonical_team_name(team_name)
+    event_row = team_event_lookup.get(_normalise_text(canonical_name))
+    if event_row is None:
+        return defaults[metric_name]
+
+    value = event_row.get(metric_name, np.nan)
+    if pd.isna(value):
+        return defaults[metric_name]
+    return float(value)
+
+
+def _fifa_ranking_defaults(latest_fifa_rankings: pd.DataFrame) -> dict[str, float]:
+    return {
+        "fifa_rank": float(pd.to_numeric(latest_fifa_rankings["fifa_rank"]).median()),
+        "fifa_points": float(pd.to_numeric(latest_fifa_rankings["fifa_points"]).median()),
+    }
+
+
+def _fifa_metric(
+    team_name: object,
+    metric_name: str,
+    fifa_ranking_lookup: dict[str, pd.Series],
+    defaults: dict[str, float],
+) -> float:
+    canonical_name = canonical_team_name(team_name)
+    ranking_row = fifa_ranking_lookup.get(_normalise_text(canonical_name))
+    if ranking_row is None:
+        return defaults[metric_name]
+
+    value = ranking_row.get(metric_name, np.nan)
+    if pd.isna(value):
+        return defaults[metric_name]
+    return float(value)
+
+
+def _external_player_strength_defaults(external_player_strength: pd.DataFrame) -> dict[str, float]:
+    metric_names = [
+        "avg_overall",
+        "max_overall",
+        "avg_attack_overall",
+        "avg_defense_overall",
+        "avg_pace",
+        "avg_shooting",
+        "avg_passing",
+    ]
+    defaults = {}
+    for metric_name in metric_names:
+        metric_values = pd.to_numeric(external_player_strength[metric_name], errors="coerce")
+        defaults[metric_name] = float(metric_values.median())
+    return defaults
+
+
+def _external_player_metric(
+    team_name: object,
+    metric_name: str,
+    external_player_lookup: dict[str, pd.Series],
+    defaults: dict[str, float],
+) -> float:
+    canonical_name = canonical_team_name(team_name)
+    player_row = external_player_lookup.get(_normalise_text(canonical_name))
+    if player_row is None:
+        return defaults[metric_name]
+
+    value = player_row.get(metric_name, np.nan)
+    if pd.isna(value):
+        return defaults[metric_name]
+    return float(value)
+
+
 def _elo_rating(team_name: object, models: TrainedGoalModels) -> float:
     return float(models.current_elo_ratings.get(canonical_team_name(team_name), DEFAULT_ELO))
+
+
+def _team_tiebreak_strength(
+    team_name: object,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+) -> float:
+    fifa_lookup = _team_strength_lookup(latest_fifa_rankings)
+    fifa_defaults = _fifa_ranking_defaults(latest_fifa_rankings)
+    player_lookup = _team_strength_lookup(external_player_strength)
+    player_defaults = _external_player_strength_defaults(external_player_strength)
+
+    elo_score = _elo_rating(team_name, models)
+    fifa_points = _fifa_metric(team_name, "fifa_points", fifa_lookup, fifa_defaults)
+    player_overall = _external_player_metric(
+        team_name,
+        "avg_overall",
+        player_lookup,
+        player_defaults,
+    )
+    return elo_score + (0.6 * fifa_points) + (20.0 * player_overall)
+
+
+def _group_tiebreak_strengths(
+    group_predictions: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+) -> dict[str, float]:
+    teams = sorted(
+        set(group_predictions["home_team"].tolist())
+        | set(group_predictions["away_team"].tolist())
+    )
+    return {
+        team: _team_tiebreak_strength(
+            team,
+            latest_fifa_rankings,
+            external_player_strength,
+            models,
+        )
+        for team in teams
+    }
 
 
 def _row_team_name_for_model(row: object, side: str) -> str:
@@ -410,9 +1287,27 @@ def _row_team_name_for_model(row: object, side: str) -> str:
 def _prepare_world_cup_match_features(
     matches: pd.DataFrame,
     team_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
     models: TrainedGoalModels,
+    external_player_strength: pd.DataFrame | None = None,
+    feature_columns: list[str] | None = None,
 ) -> pd.DataFrame:
+    if feature_columns is None:
+        feature_columns = FEATURE_COLUMNS
+
     strength_lookup = _team_strength_lookup(team_strength)
+    fifa_ranking_lookup = _team_strength_lookup(latest_fifa_rankings)
+    fifa_defaults = _fifa_ranking_defaults(latest_fifa_rankings)
+    external_player_lookup = (
+        _team_strength_lookup(external_player_strength)
+        if external_player_strength is not None
+        else {}
+    )
+    external_player_defaults = (
+        _external_player_strength_defaults(external_player_strength)
+        if external_player_strength is not None
+        else {}
+    )
     rows = []
 
     for row in matches.itertuples(index=False):
@@ -438,6 +1333,70 @@ def _prepare_world_cup_match_features(
             "last_10_goals_against_per_match",
             strength_lookup,
         )
+        home_fifa_rank = _fifa_metric(
+            home_team,
+            "fifa_rank",
+            fifa_ranking_lookup,
+            fifa_defaults,
+        )
+        away_fifa_rank = _fifa_metric(
+            away_team,
+            "fifa_rank",
+            fifa_ranking_lookup,
+            fifa_defaults,
+        )
+        home_fifa_points = _fifa_metric(
+            home_team,
+            "fifa_points",
+            fifa_ranking_lookup,
+            fifa_defaults,
+        )
+        away_fifa_points = _fifa_metric(
+            away_team,
+            "fifa_points",
+            fifa_ranking_lookup,
+            fifa_defaults,
+        )
+        home_external_overall = _external_player_metric(
+            home_team,
+            "avg_overall",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        away_external_overall = _external_player_metric(
+            away_team,
+            "avg_overall",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        home_external_attack = _external_player_metric(
+            home_team,
+            "avg_attack_overall",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        away_external_attack = _external_player_metric(
+            away_team,
+            "avg_attack_overall",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        home_external_defense = _external_player_metric(
+            home_team,
+            "avg_defense_overall",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        away_external_defense = _external_player_metric(
+            away_team,
+            "avg_defense_overall",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        home_last_10_matches = _team_metric(home_team, "last_10_matches", strength_lookup)
+        away_last_10_matches = _team_metric(away_team, "last_10_matches", strength_lookup)
+        home_last_10_wins = _team_metric(home_team, "last_10_wins", strength_lookup)
+        away_last_10_wins = _team_metric(away_team, "last_10_wins", strength_lookup)
 
         rows.append(
             {
@@ -455,6 +1414,12 @@ def _prepare_world_cup_match_features(
                 "prior_10_goals_for_per_match_diff": home_goals_for - away_goals_for,
                 "prior_10_goals_against_per_match_diff": home_goals_against
                 - away_goals_against,
+                "home_fifa_rank": home_fifa_rank,
+                "away_fifa_rank": away_fifa_rank,
+                "home_fifa_points": home_fifa_points,
+                "away_fifa_points": away_fifa_points,
+                "fifa_rank_diff": home_fifa_rank - away_fifa_rank,
+                "fifa_points_diff": home_fifa_points - away_fifa_points,
                 "home_pre_match_elo": home_elo,
                 "away_pre_match_elo": away_elo,
                 "pre_match_elo_diff": home_elo - away_elo,
@@ -463,28 +1428,131 @@ def _prepare_world_cup_match_features(
                     away_elo,
                     bool(neutral),
                 ),
+                "external_home_elo": home_elo,
+                "external_away_elo": away_elo,
+                "external_elo_diff": home_elo - away_elo,
+                "external_home_avg_overall": home_external_overall,
+                "external_home_max_overall": _external_player_metric(
+                    home_team,
+                    "max_overall",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_home_avg_attack": home_external_attack,
+                "external_home_avg_defense": home_external_defense,
+                "external_home_avg_pace": _external_player_metric(
+                    home_team,
+                    "avg_pace",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_home_avg_shooting": _external_player_metric(
+                    home_team,
+                    "avg_shooting",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_home_avg_passing": _external_player_metric(
+                    home_team,
+                    "avg_passing",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_away_avg_overall": away_external_overall,
+                "external_away_max_overall": _external_player_metric(
+                    away_team,
+                    "max_overall",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_away_avg_attack": away_external_attack,
+                "external_away_avg_defense": away_external_defense,
+                "external_away_avg_pace": _external_player_metric(
+                    away_team,
+                    "avg_pace",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_away_avg_shooting": _external_player_metric(
+                    away_team,
+                    "avg_shooting",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_away_avg_passing": _external_player_metric(
+                    away_team,
+                    "avg_passing",
+                    external_player_lookup,
+                    external_player_defaults,
+                ) if external_player_strength is not None else np.nan,
+                "external_overall_diff": home_external_overall - away_external_overall,
+                "external_attack_diff": home_external_attack - away_external_attack,
+                "external_defense_diff": home_external_defense - away_external_defense,
+                "external_home_form_scored": home_goals_for,
+                "external_home_form_conceded": home_goals_against,
+                "external_home_form_win_rate": home_last_10_wins / max(home_last_10_matches, 1),
+                "external_away_form_scored": away_goals_for,
+                "external_away_form_conceded": away_goals_against,
+                "external_away_form_win_rate": away_last_10_wins / max(away_last_10_matches, 1),
+                "external_is_neutral": neutral,
+                "external_is_world_cup": 1,
+                "external_is_continental": 0,
+                "has_external_match_features": int(external_player_strength is not None),
             }
         )
 
     features = pd.DataFrame(rows)
-    features = features[FEATURE_COLUMNS]
-    return features.fillna(models.feature_medians)
+    features = features[feature_columns]
+    medians = (
+        models.outcome_feature_medians
+        if feature_columns == OUTCOME_FEATURE_COLUMNS
+        else models.feature_medians
+    )
+    return features.fillna(medians)
 
 
 def predict_world_cup_group_matches(
     world_cup_matches: pd.DataFrame,
     team_strength: pd.DataFrame,
     squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    team_event_profile: pd.DataFrame,
     models: TrainedGoalModels,
 ) -> pd.DataFrame:
     home_expected_goals, away_expected_goals = _predict_expected_goals(
         world_cup_matches,
         team_strength,
         squad_strength,
+        latest_fifa_rankings,
         models,
     )
-    predicted_home_goals = _rounded_goals(home_expected_goals)
-    predicted_away_goals = _rounded_goals(away_expected_goals)
+    outcome_predictions = _predict_match_outcomes(
+        world_cup_matches,
+        team_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+    )
+    outcome_probability_columns = [
+        f"outcome_probability_{class_name}" for class_name in models.outcome_classes
+    ]
+    reconciled_scores = [
+        _select_blended_scoreline(
+            float(home_goals),
+            float(away_goals),
+            probabilities,
+            models.outcome_classes,
+            models.scoreline_outcome_blend_weight,
+        )
+        for home_goals, away_goals, probabilities in zip(
+            home_expected_goals,
+            away_expected_goals,
+            outcome_predictions[outcome_probability_columns].to_numpy(),
+        )
+    ]
+    predicted_home_goals = np.array([score[0] for score in reconciled_scores])
+    predicted_away_goals = np.array([score[1] for score in reconciled_scores])
 
     predictions = world_cup_matches[
         ["match_id", "group_letter", "home_team", "away_team", "match_date_utc", "venue"]
@@ -493,12 +1561,13 @@ def predict_world_cup_group_matches(
     predictions["date_utc"] = pd.to_datetime(predictions["date_utc"]).dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     predictions["predicted_home_goals"] = predicted_home_goals
     predictions["predicted_away_goals"] = predicted_away_goals
-    predictions["corners"] = 9
-    predictions["yellow_cards"] = 4
-    predictions["red_cards"] = 0
+    event_predictions = _predict_event_counts(world_cup_matches, team_event_profile)
+    predictions["corners"] = event_predictions["corners"].to_numpy()
+    predictions["yellow_cards"] = event_predictions["yellow_cards"].to_numpy()
+    predictions["red_cards"] = event_predictions["red_cards"].to_numpy()
     predictions["winning_team"] = [
-        outcome_from_scores(int(home), int(away))
-        for home, away in zip(predicted_home_goals, predicted_away_goals)
+        outcome_from_scores(int(home_goals), int(away_goals))
+        for home_goals, away_goals in zip(predicted_home_goals, predicted_away_goals)
     ]
 
     predictions["_match_id_sort"] = pd.to_numeric(predictions["match_id"])
@@ -540,9 +1609,15 @@ def _predict_expected_goals(
     matches: pd.DataFrame,
     team_strength: pd.DataFrame,
     squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
     models: TrainedGoalModels,
 ) -> tuple[np.ndarray, np.ndarray]:
-    features = _prepare_world_cup_match_features(matches, team_strength, models)
+    features = _prepare_world_cup_match_features(
+        matches,
+        team_strength,
+        latest_fifa_rankings,
+        models,
+    )
     home_expected_goals = models.home_model.predict(features)
     away_expected_goals = models.away_model.predict(features)
     return _apply_squad_goal_overlay(
@@ -551,6 +1626,87 @@ def _predict_expected_goals(
         away_expected_goals,
         squad_strength,
     )
+
+
+def _predict_match_outcomes(
+    matches: pd.DataFrame,
+    team_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+) -> pd.DataFrame:
+    features = _prepare_world_cup_match_features(
+        matches,
+        team_strength,
+        latest_fifa_rankings,
+        models,
+        external_player_strength,
+        OUTCOME_FEATURE_COLUMNS,
+    )
+    probabilities = models.outcome_model.predict_proba(features)
+    predictions = _outcomes_from_probabilities(
+        probabilities,
+        models.outcome_classes,
+        models.draw_probability_threshold,
+    )
+    probability_frame = pd.DataFrame(
+        probabilities,
+        columns=[f"outcome_probability_{class_name}" for class_name in models.outcome_classes],
+    )
+    probability_frame["predicted_outcome"] = predictions
+    return probability_frame
+
+
+def _predict_event_counts(
+    matches: pd.DataFrame,
+    team_event_profile: pd.DataFrame,
+    round_names: list[str | None] | None = None,
+) -> pd.DataFrame:
+    event_lookup = _team_strength_lookup(team_event_profile)
+    defaults = _event_defaults(team_event_profile)
+    if round_names is None:
+        round_names = [None] * len(matches)
+
+    rows = []
+    for row, round_name in zip(matches.itertuples(index=False), round_names):
+        home_team = _row_team_name_for_model(row, "home")
+        away_team = _row_team_name_for_model(row, "away")
+
+        expected_corners = (
+            _event_metric(home_team, "avg_corners_for", event_lookup, defaults)
+            + _event_metric(away_team, "avg_corners_for", event_lookup, defaults)
+            + _event_metric(home_team, "avg_corners_against", event_lookup, defaults)
+            + _event_metric(away_team, "avg_corners_against", event_lookup, defaults)
+        ) / 2
+        expected_yellow_cards = (
+            _event_metric(home_team, "blended_yellow_cards_for", event_lookup, defaults)
+            + _event_metric(away_team, "blended_yellow_cards_for", event_lookup, defaults)
+            + _event_metric(home_team, "avg_yellow_cards_against", event_lookup, defaults)
+            + _event_metric(away_team, "avg_yellow_cards_against", event_lookup, defaults)
+        ) / 2
+        expected_red_cards = (
+            _event_metric(home_team, "blended_red_cards_for", event_lookup, defaults)
+            + _event_metric(away_team, "blended_red_cards_for", event_lookup, defaults)
+            + _event_metric(home_team, "avg_red_cards_against", event_lookup, defaults)
+            + _event_metric(away_team, "avg_red_cards_against", event_lookup, defaults)
+        ) / 2
+
+        yellow_adjustment = KNOCKOUT_YELLOW_CARD_ADJUSTMENTS.get(str(round_name), 0.0)
+        expected_yellow_cards += yellow_adjustment
+        expected_red_cards += yellow_adjustment * KNOCKOUT_RED_CARD_ADJUSTMENT_FACTOR
+
+        rows.append(
+            {
+                "corners": int(np.clip(np.rint(expected_corners), 4, 17)),
+                "yellow_cards": int(np.clip(np.rint(expected_yellow_cards), 1, 9)),
+                "red_cards": int(np.clip(expected_red_cards >= 0.55, 0, 2)),
+                "expected_corners": float(expected_corners),
+                "expected_yellow_cards": float(expected_yellow_cards),
+                "expected_red_cards": float(expected_red_cards),
+            }
+        )
+
+    return pd.DataFrame(rows)
 
 
 def _apply_squad_goal_overlay(
@@ -630,10 +1786,21 @@ def predict_world_cup_knockout_matches(
     group_predictions: pd.DataFrame,
     team_strength: pd.DataFrame,
     squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    team_event_profile: pd.DataFrame,
     models: TrainedGoalModels,
 ) -> pd.DataFrame:
     slots = _normalise_knockout_slots(knockout_slots)
-    standings = build_group_standings(group_predictions)
+    standings = build_group_standings(
+        group_predictions,
+        _group_tiebreak_strengths(
+            group_predictions,
+            latest_fifa_rankings,
+            external_player_strength,
+            models,
+        ),
+    )
     match_results: dict[int, dict[str, str]] = {}
     used_third_groups: set[str] = set()
     predictions = []
@@ -669,19 +1836,50 @@ def predict_world_cup_knockout_matches(
             match,
             team_strength,
             squad_strength,
+            latest_fifa_rankings,
             models,
         )
-        home_goals = int(_rounded_goals(home_expected_goals)[0])
-        away_goals = int(_rounded_goals(away_expected_goals)[0])
-        match_winner, penalties = _knockout_match_winner(
-            predicted_home_team,
-            predicted_away_team,
-            home_goals,
-            away_goals,
+        outcome_predictions = _predict_match_outcomes(
+            match,
+            team_strength,
+            latest_fifa_rankings,
+            external_player_strength,
+            models,
+        )
+        outcome_probability_columns = [
+            f"outcome_probability_{class_name}" for class_name in models.outcome_classes
+        ]
+        home_goals, away_goals = _select_blended_scoreline(
             float(home_expected_goals[0]),
             float(away_expected_goals[0]),
-            models,
+            outcome_predictions.loc[0, outcome_probability_columns].to_numpy(),
+            models.outcome_classes,
+            models.scoreline_outcome_blend_weight,
         )
+        predicted_outcome = outcome_from_scores(home_goals, away_goals)
+        if predicted_outcome == "draw":
+            home_strength = _team_tiebreak_strength(
+                predicted_home_team,
+                latest_fifa_rankings,
+                external_player_strength,
+                models,
+            )
+            away_strength = _team_tiebreak_strength(
+                predicted_away_team,
+                latest_fifa_rankings,
+                external_player_strength,
+                models,
+            )
+            match_winner = "home" if home_strength >= away_strength else "away"
+            penalties = True
+        else:
+            match_winner = predicted_outcome
+            penalties = False
+        event_counts = _predict_event_counts(
+            match,
+            team_event_profile,
+            round_names=[str(row_data["round"])],
+        ).iloc[0]
         winner_team = predicted_home_team if match_winner == "home" else predicted_away_team
         loser_team = predicted_away_team if match_winner == "home" else predicted_home_team
         match_results[match_id] = {"winner_team": winner_team, "loser_team": loser_team}
@@ -693,9 +1891,9 @@ def predict_world_cup_knockout_matches(
                 "predicted_away_team": predicted_away_team,
                 "predicted_home_goals": home_goals,
                 "predicted_away_goals": away_goals,
-                "corners": 9,
-                "yellow_cards": 4,
-                "red_cards": 0,
+                "corners": int(event_counts["corners"]),
+                "yellow_cards": int(event_counts["yellow_cards"]),
+                "red_cards": int(event_counts["red_cards"]),
                 "match_winner": match_winner,
                 "penalties": penalties,
             }
@@ -777,6 +1975,9 @@ def main() -> None:
     knockout_slots = _load_table("main_staging.stg_knockout_slots")
     team_strength = _load_table("main_marts.mart_team_strength")
     squad_strength = _load_table("main_marts.mart_squad_strength")
+    latest_fifa_rankings = _load_table("main_marts.mart_latest_fifa_rankings")
+    external_player_strength = _load_table("main_marts.mart_external_player_strength")
+    team_event_profile = _load_table("main_marts.mart_team_event_profile")
     historical_results = _load_table("main_staging.stg_international_results")
 
     models, metrics = train_goal_models(training_data, historical_results)
@@ -790,10 +1991,50 @@ def main() -> None:
             "attacking star power, defensive experience, and overall star power z-scores."
         ),
     }
+    metrics["event_predictions"] = {
+        "enabled": True,
+        "source_table": "main_marts.mart_team_event_profile",
+        "teams_with_event_profiles": int(team_event_profile["team_name"].nunique()),
+        "international_event_matches": int(
+            team_event_profile["international_event_matches"].sum()
+        ),
+        "matched_club_players": int(team_event_profile["matched_club_players"].sum()),
+        "method": (
+            "Corners use weighted international team event rates. Yellow and red cards "
+            "blend international team rates with 2025/26 top-five-league club player "
+            "discipline where squad players can be matched."
+        ),
+    }
+    metrics["fifa_rankings"] = {
+        "enabled": True,
+        "source_table": "main_marts.mart_latest_fifa_rankings",
+        "latest_ranking_date": str(latest_fifa_rankings["ranking_date"].max()),
+        "teams_with_latest_rankings": int(latest_fifa_rankings["team_name"].nunique()),
+    }
+    metrics["external_match_features"] = {
+        "enabled": True,
+        "source_table": "main_staging.stg_international_match_features",
+        "current_player_strength_table": "main_marts.mart_external_player_strength",
+        "historical_rows_with_external_features": int(
+            training_data["has_external_match_features"].sum()
+        ),
+        "teams_with_current_player_strength": int(
+            external_player_strength["team_name"].nunique()
+        ),
+        "method": (
+            "Outcome model receives historical external Elo, EA Sports/FIFA player "
+            "aggregate ratings, and form features where matched. Missing historical "
+            "features use training-set medians; 2026 scoring uses the latest player "
+            "aggregate snapshot."
+        ),
+    }
     group_predictions = predict_world_cup_group_matches(
         world_cup_matches,
         team_strength,
         squad_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        team_event_profile,
         models,
     )
     knockout_predictions = predict_world_cup_knockout_matches(
@@ -801,6 +2042,9 @@ def main() -> None:
         group_predictions,
         team_strength,
         squad_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        team_event_profile,
         models,
     )
     predictions = build_model_predictions(group_predictions, knockout_predictions)
@@ -824,14 +2068,33 @@ def main() -> None:
     )
 
     print(f"Selected model: {metrics['selected_model_type']}")
+    print(f"Selected outcome model: {metrics['selected_outcome_model_type']}")
     print(f"Training rows: {metrics['training']['rows']:,}")
     print(f"Holdout rows: {metrics['holdout']['rows']:,}")
+    print(f"Tournament calibration rows: {metrics['tournament_calibration']['rows']:,}")
+    print(f"Selected draw threshold: {metrics['draw_probability_threshold']:.2f}")
+    print(
+        "Selected scoreline/outcome blend weight: "
+        f"{metrics['scoreline_outcome_blend_weight']:.2f}"
+    )
     print(f"Holdout home goals MAE: {metrics['holdout']['home_goals_mae']:.3f}")
     print(f"Holdout away goals MAE: {metrics['holdout']['away_goals_mae']:.3f}")
     print(f"Holdout average goals MAE: {metrics['holdout']['average_goals_mae']:.3f}")
     print(
         "Holdout rounded outcome accuracy: "
         f"{metrics['holdout']['rounded_match_outcome_accuracy']:.3f}"
+    )
+    print(
+        "Holdout direct outcome accuracy: "
+        f"{metrics['outcome_holdout']['accuracy']:.3f}"
+    )
+    print(
+        "Holdout blended scoreline outcome accuracy: "
+        f"{metrics['reconciled_holdout']['match_outcome_accuracy']:.3f}"
+    )
+    print(
+        "Holdout blended exact score accuracy: "
+        f"{metrics['reconciled_holdout']['exact_score_accuracy']:.3f}"
     )
     print(f"Wrote group predictions to {MODEL_GROUP_PREDICTIONS_V2_PATH}")
     print(f"Wrote knockout predictions to {MODEL_KNOCKOUT_PREDICTIONS_V2_PATH}")

@@ -87,4 +87,21 @@ data/processed/model_knockout_predictions_v2.csv
 data/processed/model_predictions_v2.csv
 ```
 
-For the DataCamp workbook, load `model_group_predictions_v2.csv` into `group_predictions` and `model_knockout_predictions_v2.csv` into `knockout_predictions`.
+## Final Submission Export
+
+Run this after `src\train_model.py`:
+
+```powershell
+.\.venv\Scripts\python.exe src\export_datacamp_submission.py
+```
+
+Outputs:
+
+```text
+data/processed/submission_group_predictions.csv
+data/processed/submission_knockout_predictions.csv
+data/processed/submission_predictions.csv
+data/processed/submission_validation.json
+```
+
+For the DataCamp workbook, load `submission_group_predictions.csv` into `group_predictions` and `submission_knockout_predictions.csv` into `knockout_predictions`.

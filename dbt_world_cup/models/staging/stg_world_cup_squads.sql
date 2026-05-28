@@ -14,6 +14,7 @@ select
     cast(shirt_number as integer) as shirt_number,
     upper(trim(cast(position as varchar))) as position,
     trim(cast(player_name as varchar)) as player_name,
+    {{ normalized_name_key('player_name') }} as player_name_key,
     cast(is_captain as boolean) as is_captain,
     try_cast(date_of_birth as date) as date_of_birth,
     cast(age as integer) as age,

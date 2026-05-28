@@ -26,6 +26,7 @@ The goal is practical first: generate a valid baseline submission, then improve 
 .
 |-- data/
 |   |-- raw/              # Competition CSVs and optional external sources
+|   |-- bi_exports/       # Reproducible dashboard CSV extracts
 |   `-- processed/        # DuckDB database and generated submissions
 |-- dbt_profiles/         # Local dbt profile for DuckDB
 |-- dbt_world_cup/        # dbt project
@@ -66,6 +67,24 @@ Download currently published World Cup squad tables:
 python src/download_squad_data.py
 ```
 
+Download event data for corners and cards:
+
+```powershell
+python src/download_event_data.py
+```
+
+Download FIFA ranking history and the latest official FIFA ranking snapshot:
+
+```powershell
+python src/download_fifa_rankings.py
+```
+
+Download external international match/player features:
+
+```powershell
+python src/download_match_feature_data.py
+```
+
 See [docs/data_sources.md](docs/data_sources.md) for source details.
 
 ## Run The Pipeline
@@ -94,6 +113,18 @@ Train the model-driven scorer:
 .\.venv\Scripts\python.exe src\train_model.py
 ```
 
+Export and validate the final DataCamp-ready submission tables:
+
+```powershell
+.\.venv\Scripts\python.exe src\export_datacamp_submission.py
+```
+
+Export dashboard-ready CSV assets:
+
+```powershell
+.\.venv\Scripts\python.exe src\export_bi_assets.py
+```
+
 The workbook-facing baseline outputs are written to:
 
 ```text
@@ -114,6 +145,22 @@ data/processed/model_group_predictions_v2.csv
 data/processed/model_knockout_predictions_v2.csv
 data/processed/model_predictions_v2.csv
 data/processed/model_metrics_v2.json
+data/processed/submission_group_predictions.csv
+data/processed/submission_knockout_predictions.csv
+data/processed/submission_predictions.csv
+data/processed/submission_validation.json
+```
+
+The BI/dashboard exports are written to:
+
+```text
+data/bi_exports/dashboard_match_predictions.csv
+data/bi_exports/dashboard_group_standings.csv
+data/bi_exports/dashboard_team_profiles.csv
+data/bi_exports/dashboard_match_feature_context.csv
+data/bi_exports/dashboard_model_metrics.csv
+data/bi_exports/dashboard_data_quality.csv
+data/bi_exports/dashboard_historical_competition_summary.csv
 ```
 
 ## Learning Notes
@@ -126,6 +173,14 @@ Use [docs/exploring_the_project.md](docs/exploring_the_project.md) for a hands-o
 
 Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on the trained model and how dbt feeds the Python modeling step.
 
+Use [docs/tournament_realism_review.md](docs/tournament_realism_review.md) for the latest full-tournament sanity check of group standings, tiebreaks, and the knockout bracket.
+
+Use [docs/submission_methodology.md](docs/submission_methodology.md) for a competition-facing model summary and workbook loading snippet.
+
+Use [docs/dashboard_guide.md](docs/dashboard_guide.md) for the Looker Studio/dashboard build plan and BI export definitions.
+
+Use [docs/resume_project_positioning.md](docs/resume_project_positioning.md) for a concise analytics engineering resume framing.
+
 ## Current Status
 
-This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results and currently published squad tables download reproducibly, dbt resolves stale playoff placeholders through a tested seed, dbt builds the local DuckDB warehouse, dbt tests pass, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo features to the dbt-built recent-form features, then applies a conservative squad star-power overlay for teams with published roster data.
+This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results, FIFA ranking history, external match/player aggregate features, currently published squad tables, FootyStats match events, and KaggleHub club player stats download reproducibly. dbt resolves stale playoff placeholders through a tested seed, builds the local DuckDB warehouse, tests the transformation assumptions, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo, FIFA ranking, and external player aggregate features to dbt-built recent-form features, applies a conservative squad star-power overlay, predicts corners/cards from the dbt-built team event profile, and selects final scorelines with a tournament-calibrated blend of Poisson score probabilities and direct outcome probabilities. The project also includes a dashboard-ready BI layer and reproducible CSV extracts for Looker Studio or another visualization tool.

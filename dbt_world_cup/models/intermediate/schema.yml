@@ -74,3 +74,52 @@ models:
       - name: prior_10_matches
         tests:
           - not_null
+
+  - name: int_footystats_team_match_events
+    description: One row per team per FootyStats match with corners, yellow cards, and red cards for/against.
+    columns:
+      - name: source_match_id
+        tests:
+          - not_null
+      - name: team_name
+        tests:
+          - not_null
+      - name: opponent_name
+        tests:
+          - not_null
+      - name: corners_for
+        tests:
+          - not_null
+      - name: yellow_cards_for
+        tests:
+          - not_null
+      - name: red_cards_for
+        tests:
+          - not_null
+
+  - name: int_squad_player_discipline
+    description: 2026 squad players matched to top-five-league club player card and foul statistics when available.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+      - name: player_name
+        tests:
+          - not_null
+      - name: player_name_key
+        tests:
+          - not_null
+      - name: has_club_player_stats
+        tests:
+          - not_null
+
+  - name: int_historical_match_rankings
+    description: Point-in-time FIFA rankings joined to each historical match before kickoff.
+    columns:
+      - name: result_id
+        tests:
+          - not_null
+          - unique
+      - name: has_complete_fifa_rankings
+        tests:
+          - not_null
