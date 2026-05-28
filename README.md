@@ -1,186 +1,148 @@
-# World Cup 2026 Prediction Analytics Warehouse
+# FIFA World Cup 2026 Prediction Analytics
 
-Built for DataCamp's FIFA World Cup 2026 Prediction competition, this project turns competition files and external soccer data into a tested dbt analytics warehouse and reproducible prediction pipeline.
+This project started as a DataCamp competition entry and grew into an analytics engineering portfolio project. The goal was to predict every match in the 2026 FIFA World Cup, then build the kind of tested data pipeline and reporting layer that would make those predictions explainable.
 
-The goal is practical first: generate a valid baseline submission, then improve model quality with better features. The portfolio goal is to demonstrate analytics engineering work: raw ingestion, staging models, marts, dbt tests, feature tables, CI, and clear documentation.
+The final project combines dbt, DuckDB, and Python to turn raw soccer data into model-ready features, tournament predictions, validation checks, and dashboard-ready datasets.
 
-## Competition Context
+## What This Project Does
 
-- Competition: [Predict the FIFA World Cup 2026](https://app.datacamp.com/learn/competitions/world-cup-prediction)
-- Current workbook requirements: predict scores, total corners, total yellow cards, total red cards, group-stage winners, knockout matchups, knockout winners, and penalties for all 104 matches.
-- Starter files shown in DataCamp:
-  - `data/group_fixtures.csv`: 72 group stage matches
-  - `data/knockout_slots.csv`: 32 knockout round slots
-- Workbook checklist says to publish before June 10, 2026 at 09:00 UTC. Recheck the DataCamp page before final submission.
+The competition asks for predictions across all 104 World Cup matches:
 
-## Project Stack
+- exact scorelines
+- match winners
+- knockout matchups
+- penalty shootout flags
+- total corners
+- yellow cards
+- red cards
 
-- Python for ingestion, modeling, tournament simulation, and submission generation
-- DuckDB as the local analytical database
-- dbt-duckdb for staging, intermediate, mart, and feature models
-- GitHub Actions for basic CI
+Instead of filling those values manually, this project builds a full pipeline around them:
 
-## Repository Layout
+1. Clean and standardize the raw competition fixtures.
+2. Add external soccer data: historical international results, FIFA rankings, squad data, player-strength proxies, and event data for cards/corners.
+3. Use dbt to build tested staging, intermediate, mart, feature, and BI models.
+4. Train Python models for goals and outcomes.
+5. Simulate the group stage and knockout bracket.
+6. Export validated competition files and dashboard-ready CSVs.
 
-```text
-.
-|-- data/
-|   |-- raw/              # Competition CSVs and optional external sources
-|   |-- bi_exports/       # Reproducible dashboard CSV extracts
-|   `-- processed/        # DuckDB database and generated submissions
-|-- dbt_profiles/         # Local dbt profile for DuckDB
-|-- dbt_world_cup/        # dbt project
-|   `-- seeds/            # Small manual lookup tables used by dbt
-|-- docs/                 # Notes and project documentation
-|-- notebooks/            # DataCamp submission notebook draft
-`-- src/                  # Python pipeline code
-```
+## Why dbt Matters Here
 
-## Setup
+The core analytics engineering work is in dbt. The project is intentionally layered so each step has a clear purpose:
 
-```powershell
-cd "E:\Dev\Competitions\FIFA World Cup 2026"
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
+- **Staging models** clean source files and standardize names, dates, and types.
+- **Intermediate models** reshape raw match data into reusable concepts, such as team-match rows and rolling form.
+- **Mart models** publish analyst-facing tables like team strength, squad strength, FIFA rankings, and event profiles.
+- **Feature models** produce model-ready training and scoring tables.
+- **BI models** reshape the final outputs into dashboard-friendly tables.
 
-Copy the competition CSVs into `data/raw/`:
+This separation keeps the modeling code from becoming a tangle of raw CSV joins. Python consumes tested dbt outputs instead of raw source files.
 
-```text
-data/raw/group_fixtures.csv
-data/raw/knockout_slots.csv
-```
+## Data Sources
 
-See [docs/datacamp_data_access.md](docs/datacamp_data_access.md) for notes on finding those files in DataCamp DataLab.
+The project uses a mix of competition data and public soccer datasets:
 
-Download historical international results:
+- DataCamp World Cup group fixtures and knockout slots
+- historical international match results
+- FIFA men's ranking history
+- current squad/player tables where available
+- international match-event data for corners and cards
+- club player discipline data
+- external country-level player aggregate features
 
-```powershell
-python src/download_external_data.py
-```
+One important modeling choice is point-in-time feature engineering. Historical training rows only use information that would have been available before each match. That matters because future rankings or future form would make the model look better than it really is.
 
-Download currently published World Cup squad tables:
+## Modeling Approach
 
-```powershell
-python src/download_squad_data.py
-```
+The prediction layer uses a blend of statistical modeling and tournament simulation:
 
-Download event data for corners and cards:
+- Poisson regression estimates home and away expected goals.
+- A direct outcome classifier estimates home/draw/away probabilities.
+- A calibrated scoreline selector blends exact-score likelihood with outcome probabilities.
+- A conservative squad overlay adjusts expected goals based on available squad strength.
+- Corners and cards come from dbt-built team event profiles.
+- Knockout rounds are resolved sequentially from predicted group standings.
 
-```powershell
-python src/download_event_data.py
-```
+The final scoreline drives the published winner labels, so the output stays internally consistent. For example, a predicted `1-1` group-stage match is always labeled as a draw.
 
-Download FIFA ranking history and the latest official FIFA ranking snapshot:
+## Current Model Results
 
-```powershell
-python src/download_fifa_rankings.py
-```
+The latest stable validation metrics are:
 
-Download external international match/player features:
+| Metric | Result |
+| --- | ---: |
+| Direct outcome accuracy | 61.7% |
+| Blended scoreline outcome accuracy | 62.4% |
+| Exact score accuracy | 14.7% |
+| Average goals MAE | 0.907 |
 
-```powershell
-python src/download_match_feature_data.py
-```
+Those numbers are not betting-grade, but they are realistic for a public-data international soccer forecast without market odds. Exact score prediction is especially hard, so the model is intentionally conservative with scorelines.
 
-See [docs/data_sources.md](docs/data_sources.md) for source details.
+The current simulated tournament winner is Spain over Argentina, with France finishing third.
 
-## Run The Pipeline
+## Validation And Quality Checks
 
-Validate the expected raw files:
+The project includes both dbt tests and Python tests.
 
-```powershell
-python src/ingest.py
-```
+dbt checks cover things like:
 
-Build dbt models:
+- expected row counts for fixtures and BI tables
+- uniqueness of match/team keys
+- missing values in important feature columns
+- accepted values for categorical fields
+- resolved playoff placeholders
+- point-in-time ranking coverage
+- training-feature leakage checks
 
-```powershell
-.\.venv\Scripts\dbt.exe build --project-dir dbt_world_cup --profiles-dir dbt_profiles
-```
+Python tests cover:
 
-Generate first baseline prediction files:
+- tournament standings logic
+- scoreline/outcome consistency
+- DataCamp submission validation
+- BI export shaping
+- model helper functions
 
-```powershell
-python src/generate_submission.py
-```
-
-Train the model-driven scorer:
-
-```powershell
-.\.venv\Scripts\python.exe src\train_model.py
-```
-
-Export and validate the final DataCamp-ready submission tables:
-
-```powershell
-.\.venv\Scripts\python.exe src\export_datacamp_submission.py
-```
-
-Export dashboard-ready CSV assets:
-
-```powershell
-.\.venv\Scripts\python.exe src\export_bi_assets.py
-```
-
-The workbook-facing baseline outputs are written to:
+At the time of the latest commit:
 
 ```text
-data/processed/group_predictions_baseline.csv
-data/processed/knockout_predictions_baseline.csv
+dbt build: PASS=272 WARN=0 ERROR=0
+pytest: 18 passed
 ```
 
-The combined analysis output is written to:
+## Dashboard Layer
 
-```text
-data/processed/baseline_predictions.csv
-```
+The project also produces dashboard-ready extracts for a BI tool such as Looker Studio. The dashboard layer is separate from the model-training layer because dashboard tables should be easy to explain, filter, and visualize.
 
-The current model-driven outputs are written to:
+The BI exports include:
 
-```text
-data/processed/model_group_predictions_v2.csv
-data/processed/model_knockout_predictions_v2.csv
-data/processed/model_predictions_v2.csv
-data/processed/model_metrics_v2.json
-data/processed/submission_group_predictions.csv
-data/processed/submission_knockout_predictions.csv
-data/processed/submission_predictions.csv
-data/processed/submission_validation.json
-```
+- match predictions
+- predicted group standings
+- team profile comparisons
+- match feature context
+- model metric targets
+- data quality checks
+- historical competition summaries
 
-The BI/dashboard exports are written to:
+The intended dashboard tells the story behind the predictions: who advances, why certain teams are favored, where the model sees close matches, and how complete the underlying data is.
 
-```text
-data/bi_exports/dashboard_match_predictions.csv
-data/bi_exports/dashboard_group_standings.csv
-data/bi_exports/dashboard_team_profiles.csv
-data/bi_exports/dashboard_match_feature_context.csv
-data/bi_exports/dashboard_model_metrics.csv
-data/bi_exports/dashboard_data_quality.csv
-data/bi_exports/dashboard_historical_competition_summary.csv
-```
+## Repository Guide
 
-## Learning Notes
+Useful places to start:
 
-Start with [docs/dbt_learning_notes.md](docs/dbt_learning_notes.md) for a walkthrough of the current dbt layers and why each one exists.
+- `dbt_world_cup/models/`: dbt transformations
+- `src/train_model.py`: model training and tournament simulation
+- `src/export_datacamp_submission.py`: final competition export validation
+- `src/export_bi_assets.py`: BI/dashboard export generation
+- `docs/dbt_learning_notes.md`: walkthrough of the dbt layers
+- `docs/model_training_notes.md`: modeling notes and metrics
+- `docs/dashboard_guide.md`: dashboard plan and BI export definitions
+- `docs/resume_project_positioning.md`: portfolio framing
 
-Use [docs/competition_submission_format.md](docs/competition_submission_format.md) to compare the local baseline output with the DataCamp workbook fields.
+Raw source files, the local DuckDB warehouse, and generated CSV outputs are not committed to the repo. The repository focuses on the pipeline, transformations, tests, documentation, and modeling logic.
 
-Use [docs/exploring_the_project.md](docs/exploring_the_project.md) for a hands-on guide to browsing dbt docs, reading models, and querying the DuckDB warehouse.
+## Portfolio Framing
 
-Use [docs/model_training_notes.md](docs/model_training_notes.md) for notes on the trained model and how dbt feeds the Python modeling step.
+The resume story for this project is not just "I predicted soccer matches." It is:
 
-Use [docs/tournament_realism_review.md](docs/tournament_realism_review.md) for the latest full-tournament sanity check of group standings, tiebreaks, and the knockout bracket.
+> Built a reproducible analytics engineering pipeline for FIFA World Cup forecasting using Python, DuckDB, and dbt; integrated multiple public soccer datasets; created tested marts and feature tables; trained calibrated prediction models; validated competition-ready outputs; and produced dashboard-ready BI extracts for analysis and storytelling.
 
-Use [docs/submission_methodology.md](docs/submission_methodology.md) for a competition-facing model summary and workbook loading snippet.
-
-Use [docs/dashboard_guide.md](docs/dashboard_guide.md) for the Looker Studio/dashboard build plan and BI export definitions.
-
-Use [docs/resume_project_positioning.md](docs/resume_project_positioning.md) for a concise analytics engineering resume framing.
-
-## Current Status
-
-This repo has a working baseline plus a v2 model: raw DataCamp files validate, external international results, FIFA ranking history, external match/player aggregate features, currently published squad tables, FootyStats match events, and KaggleHub club player stats download reproducibly. dbt resolves stale playoff placeholders through a tested seed, builds the local DuckDB warehouse, tests the transformation assumptions, and Python generates group and knockout prediction files matching the workbook fields. The current model adds Elo, FIFA ranking, and external player aggregate features to dbt-built recent-form features, applies a conservative squad star-power overlay, predicts corners/cards from the dbt-built team event profile, and selects final scorelines with a tournament-calibrated blend of Poisson score probabilities and direct outcome probabilities. The project also includes a dashboard-ready BI layer and reproducible CSV extracts for Looker Studio or another visualization tool.
+That is the shape of the work: data engineering, analytics modeling, quality checks, machine learning, and BI presentation in one cohesive project.
