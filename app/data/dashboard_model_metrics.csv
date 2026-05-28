@@ -1,0 +1,6 @@
+metric_name,current_value,direction,guardrail,target,stretch,status
+rounded_scoreline_outcome_accuracy,0.5498625343664084,higher,0.545,0.57,0.6,guardrail
+direct_outcome_accuracy,0.6173456635841039,higher,0.58,0.62,0.65,guardrail
+reconciled_scoreline_exact_accuracy,0.1469632591852037,higher,0.1,0.12,0.14,stretch
+average_goals_mae,0.907076488709746,lower,0.95,0.9,0.86,guardrail
+blended_scoreline_outcome_accuracy,0.6240939765058735,higher,0.58,0.62,0.65,target

@@ -97,7 +97,10 @@ def test_flatten_metric_targets_builds_dashboard_table() -> None:
                 "stretch": 0.65,
                 "status": "guardrail",
             }
-        }
+        },
+        "reconciled_holdout": {
+            "match_outcome_accuracy": 0.624,
+        },
     }
 
     dashboard = _flatten_metric_targets(metrics)
@@ -111,5 +114,14 @@ def test_flatten_metric_targets_builds_dashboard_table() -> None:
             "target": 0.62,
             "stretch": 0.65,
             "status": "guardrail",
-        }
+        },
+        {
+            "metric_name": "blended_scoreline_outcome_accuracy",
+            "current_value": 0.624,
+            "direction": "higher",
+            "guardrail": 0.58,
+            "target": 0.62,
+            "stretch": 0.65,
+            "status": "target",
+        },
     ]

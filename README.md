@@ -110,7 +110,7 @@ pytest: 18 passed
 
 ## Dashboard Layer
 
-The project also produces dashboard-ready extracts for a BI tool such as Looker Studio. The dashboard layer is separate from the model-training layer because dashboard tables should be easy to explain, filter, and visualize.
+The project also includes an interactive Streamlit dashboard and dashboard-ready extracts for a BI tool such as Looker Studio. The dashboard layer is separate from the model-training layer because dashboard tables should be easy to explain, filter, and visualize.
 
 The BI exports include:
 
@@ -124,11 +124,20 @@ The BI exports include:
 
 The intended dashboard tells the story behind the predictions: who advances, why certain teams are favored, where the model sees close matches, and how complete the underlying data is.
 
+The Streamlit app lives in:
+
+```text
+app/streamlit_app.py
+```
+
+It reads a committed dashboard snapshot from `app/data/`, which makes it lightweight enough to host on Streamlit Community Cloud without rebuilding the full DuckDB/dbt/modeling pipeline.
+
 ## Repository Guide
 
 Useful places to start:
 
 - `dbt_world_cup/models/`: dbt transformations
+- `app/streamlit_app.py`: interactive dashboard app
 - `src/train_model.py`: model training and tournament simulation
 - `src/export_datacamp_submission.py`: final competition export validation
 - `src/export_bi_assets.py`: BI/dashboard export generation

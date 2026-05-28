@@ -1,6 +1,6 @@
 # Dashboard Guide
 
-This project now has a BI-ready layer for a resume-friendly analytics engineering story.
+This project now has a BI-ready layer and a Streamlit dashboard for a resume-friendly analytics engineering story.
 
 ## Dashboard Goal
 
@@ -39,6 +39,30 @@ data/bi_exports/
 | `dashboard_model_metrics.csv` | One row per model metric | Guardrail, target, stretch, and current model performance |
 | `dashboard_data_quality.csv` | One row per validation check | Submission row counts and prediction distribution checks |
 | `dashboard_historical_competition_summary.csv` | One row per year/tournament | Training-data coverage and historical scoring environment |
+
+## Streamlit Path
+
+The fastest portfolio dashboard is the Streamlit app in:
+
+```text
+app/streamlit_app.py
+```
+
+It reads the committed snapshot in:
+
+```text
+app/data/
+```
+
+That snapshot is copied from the reproducible BI exports so the hosted dashboard can run without raw files, the local DuckDB warehouse, or a long rebuild.
+
+Suggested hosting path:
+
+1. Open [Streamlit Community Cloud](https://streamlit.io/cloud).
+2. Connect the GitHub repository.
+3. Use `app/streamlit_app.py` as the main app file.
+4. Deploy from the `main` branch.
+5. Add the public app URL to the README.
 
 ## Looker Studio Path
 

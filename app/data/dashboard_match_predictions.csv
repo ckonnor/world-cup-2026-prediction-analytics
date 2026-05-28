@@ -1,0 +1,105 @@
+match_id,competition_phase,group,round,multiplier,date_utc,venue,slot_home,slot_away,home_team,away_team,predicted_home_team,predicted_away_team,predicted_home_goals,predicted_away_goals,corners,yellow_cards,red_cards,winner_label,penalties,scoreline,total_goals,total_cards,predicted_winner_team,is_draw_scoreline
+1,group,A,Group stage,1.0,2026-06-11T19:00:00Z,"Estadio Azteca, Mexico City",,,Mexico,South Africa,Mexico,South Africa,2,0,9,3,0,home,False,2-0,2,3,Mexico,False
+2,group,A,Group stage,1.0,2026-06-12T02:00:00Z,"Estadio Akron, Guadalajara",,,South Korea,Czechia,South Korea,Czechia,1,0,10,4,0,home,False,1-0,1,4,South Korea,False
+3,group,B,Group stage,1.0,2026-06-12T19:00:00Z,"BMO Field, Toronto",,,Canada,Bosnia and Herzegovina,Canada,Bosnia and Herzegovina,2,0,8,4,0,home,False,2-0,2,4,Canada,False
+4,group,D,Group stage,1.0,2026-06-13T01:00:00Z,"SoFi Stadium, Los Angeles",,,USA,Paraguay,USA,Paraguay,1,0,9,4,0,home,False,1-0,1,4,USA,False
+5,group,D,Group stage,1.0,2026-06-13T04:00:00Z,"BC Place, Vancouver",,,Australia,Turkiye,Australia,Turkiye,1,1,10,3,0,draw,False,1-1,2,3,Draw,True
+6,group,B,Group stage,1.0,2026-06-13T19:00:00Z,"Levi's Stadium, Santa Clara",,,Qatar,Switzerland,Qatar,Switzerland,0,2,9,4,0,away,False,0-2,2,4,Switzerland,False
+7,group,C,Group stage,1.0,2026-06-13T22:00:00Z,"MetLife Stadium, East Rutherford",,,Brazil,Morocco,Brazil,Morocco,1,0,9,4,0,home,False,1-0,1,4,Brazil,False
+8,group,C,Group stage,1.0,2026-06-14T01:00:00Z,"Gillette Stadium, Boston",,,Haiti,Scotland,Haiti,Scotland,1,1,10,4,0,draw,False,1-1,2,4,Draw,True
+9,group,E,Group stage,1.0,2026-06-14T17:00:00Z,"NRG Stadium, Houston",,,Germany,Curaçao,Germany,Curaçao,2,0,9,3,0,home,False,2-0,2,3,Germany,False
+10,group,F,Group stage,1.0,2026-06-14T20:00:00Z,"AT&T Stadium, Dallas",,,Netherlands,Japan,Netherlands,Japan,1,0,9,3,0,home,False,1-0,1,3,Netherlands,False
+11,group,E,Group stage,1.0,2026-06-14T23:00:00Z,"Lincoln Financial Field, Philadelphia",,,Côte d'Ivoire,Ecuador,Côte d'Ivoire,Ecuador,0,0,9,3,0,draw,False,0-0,0,3,Draw,True
+12,group,F,Group stage,1.0,2026-06-15T02:00:00Z,"Estadio BBVA, Monterrey",,,Sweden,Tunisia,Sweden,Tunisia,1,0,10,4,0,home,False,1-0,1,4,Sweden,False
+13,group,H,Group stage,1.0,2026-06-15T16:00:00Z,"Mercedes-Benz Stadium, Atlanta",,,Spain,Cabo Verde,Spain,Cabo Verde,3,0,9,3,0,home,False,3-0,3,3,Spain,False
+14,group,G,Group stage,1.0,2026-06-15T19:00:00Z,"Lumen Field, Seattle",,,Belgium,Egypt,Belgium,Egypt,1,0,10,3,0,home,False,1-0,1,3,Belgium,False
+15,group,H,Group stage,1.0,2026-06-15T22:00:00Z,"Hard Rock Stadium, Miami",,,Saudi Arabia,Uruguay,Saudi Arabia,Uruguay,1,1,9,4,0,draw,False,1-1,2,4,Draw,True
+16,group,G,Group stage,1.0,2026-06-16T01:00:00Z,"SoFi Stadium, Los Angeles",,,Iran,New Zealand,Iran,New Zealand,1,0,9,3,0,home,False,1-0,1,3,Iran,False
+17,group,J,Group stage,1.0,2026-06-16T04:00:00Z,"Levi's Stadium, Santa Clara",,,Austria,Jordan,Austria,Jordan,1,0,9,3,0,home,False,1-0,1,3,Austria,False
+18,group,I,Group stage,1.0,2026-06-16T19:00:00Z,"MetLife Stadium, East Rutherford",,,France,Senegal,France,Senegal,1,0,8,3,0,home,False,1-0,1,3,France,False
+19,group,I,Group stage,1.0,2026-06-16T22:00:00Z,"Gillette Stadium, Boston",,,Iraq,Norway,Iraq,Norway,1,1,8,3,0,draw,False,1-1,2,3,Draw,True
+20,group,J,Group stage,1.0,2026-06-17T01:00:00Z,"GEHA Field at Arrowhead Stadium, Kansas City",,,Argentina,Algeria,Argentina,Algeria,2,0,9,4,0,home,False,2-0,2,4,Argentina,False
+21,group,K,Group stage,1.0,2026-06-17T17:00:00Z,"NRG Stadium, Houston",,,Portugal,Congo DR,Portugal,Congo DR,2,0,9,3,0,home,False,2-0,2,3,Portugal,False
+22,group,L,Group stage,1.0,2026-06-17T20:00:00Z,"AT&T Stadium, Dallas",,,England,Croatia,England,Croatia,2,1,10,3,0,home,False,2-1,3,3,England,False
+23,group,L,Group stage,1.0,2026-06-17T23:00:00Z,"BMO Field, Toronto",,,Ghana,Panama,Ghana,Panama,0,2,9,4,0,away,False,0-2,2,4,Panama,False
+24,group,K,Group stage,1.0,2026-06-18T02:00:00Z,"Estadio Azteca, Mexico City",,,Uzbekistan,Colombia,Uzbekistan,Colombia,1,1,8,3,0,draw,False,1-1,2,3,Draw,True
+25,group,A,Group stage,1.0,2026-06-18T16:00:00Z,"Mercedes-Benz Stadium, Atlanta",,,Czechia,South Africa,Czechia,South Africa,1,0,9,3,0,home,False,1-0,1,3,Czechia,False
+26,group,B,Group stage,1.0,2026-06-18T19:00:00Z,"SoFi Stadium, Los Angeles",,,Switzerland,Bosnia and Herzegovina,Switzerland,Bosnia and Herzegovina,2,0,9,4,0,home,False,2-0,2,4,Switzerland,False
+27,group,B,Group stage,1.0,2026-06-18T22:00:00Z,"BC Place, Vancouver",,,Canada,Qatar,Canada,Qatar,2,0,8,4,0,home,False,2-0,2,4,Canada,False
+28,group,A,Group stage,1.0,2026-06-19T01:00:00Z,"Estadio Akron, Guadalajara",,,Mexico,South Korea,Mexico,South Korea,1,0,10,4,0,home,False,1-0,1,4,Mexico,False
+29,group,D,Group stage,1.0,2026-06-19T04:00:00Z,"Levi's Stadium, Santa Clara",,,Turkiye,Paraguay,Turkiye,Paraguay,1,0,10,4,0,home,False,1-0,1,4,Turkiye,False
+30,group,D,Group stage,1.0,2026-06-19T19:00:00Z,"Lumen Field, Seattle",,,USA,Australia,USA,Australia,1,0,9,3,0,home,False,1-0,1,3,USA,False
+31,group,C,Group stage,1.0,2026-06-19T22:00:00Z,"Gillette Stadium, Boston",,,Scotland,Morocco,Scotland,Morocco,1,1,10,4,0,draw,False,1-1,2,4,Draw,True
+32,group,C,Group stage,1.0,2026-06-20T01:00:00Z,"Lincoln Financial Field, Philadelphia",,,Brazil,Haiti,Brazil,Haiti,2,0,9,4,0,home,False,2-0,2,4,Brazil,False
+33,group,F,Group stage,1.0,2026-06-20T04:00:00Z,"Estadio BBVA, Monterrey",,,Tunisia,Japan,Tunisia,Japan,0,2,9,3,0,away,False,0-2,2,3,Japan,False
+34,group,F,Group stage,1.0,2026-06-20T17:00:00Z,"NRG Stadium, Houston",,,Netherlands,Sweden,Netherlands,Sweden,2,0,9,4,0,home,False,2-0,2,4,Netherlands,False
+35,group,E,Group stage,1.0,2026-06-20T20:00:00Z,"BMO Field, Toronto",,,Germany,Côte d'Ivoire,Germany,Côte d'Ivoire,1,0,10,3,0,home,False,1-0,1,3,Germany,False
+36,group,E,Group stage,1.0,2026-06-21T00:00:00Z,"GEHA Field at Arrowhead Stadium, Kansas City",,,Ecuador,Curaçao,Ecuador,Curaçao,2,0,8,3,0,home,False,2-0,2,3,Ecuador,False
+37,group,H,Group stage,1.0,2026-06-21T16:00:00Z,"Mercedes-Benz Stadium, Atlanta",,,Spain,Saudi Arabia,Spain,Saudi Arabia,2,0,9,4,0,home,False,2-0,2,4,Spain,False
+38,group,G,Group stage,1.0,2026-06-21T19:00:00Z,"SoFi Stadium, Los Angeles",,,Belgium,Iran,Belgium,Iran,1,0,10,3,0,home,False,1-0,1,3,Belgium,False
+39,group,H,Group stage,1.0,2026-06-21T22:00:00Z,"Hard Rock Stadium, Miami",,,Uruguay,Cabo Verde,Uruguay,Cabo Verde,2,0,9,4,0,home,False,2-0,2,4,Uruguay,False
+40,group,G,Group stage,1.0,2026-06-22T01:00:00Z,"BC Place, Vancouver",,,New Zealand,Egypt,New Zealand,Egypt,1,1,9,3,0,draw,False,1-1,2,3,Draw,True
+41,group,J,Group stage,1.0,2026-06-22T17:00:00Z,"AT&T Stadium, Dallas",,,Argentina,Austria,Argentina,Austria,2,0,8,5,0,home,False,2-0,2,5,Argentina,False
+42,group,I,Group stage,1.0,2026-06-22T21:00:00Z,"Lincoln Financial Field, Philadelphia",,,France,Iraq,France,Iraq,2,0,9,4,0,home,False,2-0,2,4,France,False
+43,group,I,Group stage,1.0,2026-06-23T00:00:00Z,"MetLife Stadium, East Rutherford",,,Norway,Senegal,Norway,Senegal,1,0,8,3,0,home,False,1-0,1,3,Norway,False
+44,group,J,Group stage,1.0,2026-06-23T03:00:00Z,"Levi's Stadium, Santa Clara",,,Jordan,Algeria,Jordan,Algeria,1,1,10,3,0,draw,False,1-1,2,3,Draw,True
+45,group,K,Group stage,1.0,2026-06-23T17:00:00Z,"NRG Stadium, Houston",,,Portugal,Uzbekistan,Portugal,Uzbekistan,1,0,8,3,0,home,False,1-0,1,3,Portugal,False
+46,group,L,Group stage,1.0,2026-06-23T20:00:00Z,"Gillette Stadium, Boston",,,England,Ghana,England,Ghana,2,0,9,3,0,home,False,2-0,2,3,England,False
+47,group,L,Group stage,1.0,2026-06-23T23:00:00Z,"BMO Field, Toronto",,,Panama,Croatia,Panama,Croatia,1,1,10,3,0,draw,False,1-1,2,3,Draw,True
+48,group,K,Group stage,1.0,2026-06-24T02:00:00Z,"Estadio Akron, Guadalajara",,,Colombia,Congo DR,Colombia,Congo DR,2,0,9,4,0,home,False,2-0,2,4,Colombia,False
+49,group,B,Group stage,1.0,2026-06-24T19:00:00Z,"BC Place, Vancouver",,,Switzerland,Canada,Switzerland,Canada,1,0,8,4,0,home,False,1-0,1,4,Switzerland,False
+50,group,B,Group stage,1.0,2026-06-24T19:00:00Z,"Lumen Field, Seattle",,,Bosnia and Herzegovina,Qatar,Bosnia and Herzegovina,Qatar,1,1,8,4,0,draw,False,1-1,2,4,Draw,True
+51,group,C,Group stage,1.0,2026-06-24T22:00:00Z,"Hard Rock Stadium, Miami",,,Scotland,Brazil,Scotland,Brazil,1,1,10,4,0,draw,False,1-1,2,4,Draw,True
+52,group,C,Group stage,1.0,2026-06-24T22:00:00Z,"Mercedes-Benz Stadium, Atlanta",,,Morocco,Haiti,Morocco,Haiti,1,0,9,4,0,home,False,1-0,1,4,Morocco,False
+53,group,A,Group stage,1.0,2026-06-25T01:00:00Z,"Estadio Azteca, Mexico City",,,Czechia,Mexico,Czechia,Mexico,0,1,10,4,0,away,False,0-1,1,4,Mexico,False
+54,group,A,Group stage,1.0,2026-06-25T01:00:00Z,"Estadio BBVA, Monterrey",,,South Africa,South Korea,South Africa,South Korea,0,2,9,3,0,away,False,0-2,2,3,South Korea,False
+55,group,E,Group stage,1.0,2026-06-25T20:00:00Z,"Lincoln Financial Field, Philadelphia",,,Curaçao,Côte d'Ivoire,Curaçao,Côte d'Ivoire,1,1,9,3,0,draw,False,1-1,2,3,Draw,True
+56,group,E,Group stage,1.0,2026-06-25T20:00:00Z,"MetLife Stadium, East Rutherford",,,Ecuador,Germany,Ecuador,Germany,1,1,9,3,0,draw,False,1-1,2,3,Draw,True
+57,group,F,Group stage,1.0,2026-06-25T23:00:00Z,"AT&T Stadium, Dallas",,,Japan,Sweden,Japan,Sweden,2,0,10,3,0,home,False,2-0,2,3,Japan,False
+58,group,F,Group stage,1.0,2026-06-25T23:00:00Z,"GEHA Field at Arrowhead Stadium, Kansas City",,,Tunisia,Netherlands,Tunisia,Netherlands,0,2,9,4,0,away,False,0-2,2,4,Netherlands,False
+59,group,D,Group stage,1.0,2026-06-26T02:00:00Z,"SoFi Stadium, Los Angeles",,,USA,Turkiye,USA,Turkiye,1,1,10,4,0,draw,False,1-1,2,4,Draw,True
+60,group,D,Group stage,1.0,2026-06-26T02:00:00Z,"Levi's Stadium, Santa Clara",,,Paraguay,Australia,Paraguay,Australia,1,0,9,4,0,home,False,1-0,1,4,Paraguay,False
+61,group,I,Group stage,1.0,2026-06-26T19:00:00Z,"Gillette Stadium, Boston",,,Norway,France,Norway,France,1,1,8,3,0,draw,False,1-1,2,3,Draw,True
+62,group,I,Group stage,1.0,2026-06-26T19:00:00Z,"BMO Field, Toronto",,,Senegal,Iraq,Senegal,Iraq,1,0,9,4,0,home,False,1-0,1,4,Senegal,False
+63,group,H,Group stage,1.0,2026-06-27T00:00:00Z,"NRG Stadium, Houston",,,Cabo Verde,Saudi Arabia,Cabo Verde,Saudi Arabia,1,0,9,4,0,home,False,1-0,1,4,Cabo Verde,False
+64,group,H,Group stage,1.0,2026-06-27T00:00:00Z,"Estadio Akron, Guadalajara",,,Uruguay,Spain,Uruguay,Spain,1,1,9,4,0,draw,False,1-1,2,4,Draw,True
+65,group,G,Group stage,1.0,2026-06-27T03:00:00Z,"Lumen Field, Seattle",,,Egypt,Iran,Egypt,Iran,1,1,8,3,0,draw,False,1-1,2,3,Draw,True
+66,group,G,Group stage,1.0,2026-06-27T03:00:00Z,"BC Place, Vancouver",,,New Zealand,Belgium,New Zealand,Belgium,0,2,11,3,0,away,False,0-2,2,3,Belgium,False
+67,group,L,Group stage,1.0,2026-06-27T21:00:00Z,"MetLife Stadium, East Rutherford",,,Panama,England,Panama,England,1,1,9,3,0,draw,False,1-1,2,3,Draw,True
+68,group,L,Group stage,1.0,2026-06-27T21:00:00Z,"Lincoln Financial Field, Philadelphia",,,Croatia,Ghana,Croatia,Ghana,2,0,9,3,0,home,False,2-0,2,3,Croatia,False
+69,group,K,Group stage,1.0,2026-06-27T23:30:00Z,"Hard Rock Stadium, Miami",,,Colombia,Portugal,Colombia,Portugal,1,1,9,4,0,draw,False,1-1,2,4,Draw,True
+70,group,K,Group stage,1.0,2026-06-27T23:30:00Z,"Mercedes-Benz Stadium, Atlanta",,,Congo DR,Uzbekistan,Congo DR,Uzbekistan,1,1,8,3,0,draw,False,1-1,2,3,Draw,True
+71,group,J,Group stage,1.0,2026-06-28T02:00:00Z,"GEHA Field at Arrowhead Stadium, Kansas City",,,Algeria,Austria,Algeria,Austria,1,1,9,4,0,draw,False,1-1,2,4,Draw,True
+72,group,J,Group stage,1.0,2026-06-28T02:00:00Z,"AT&T Stadium, Dallas",,,Jordan,Argentina,Jordan,Argentina,0,3,8,4,0,away,False,0-3,3,4,Argentina,False
+73,knockout,,Round of 32,1.0,2026-06-28T19:00:00Z,"SoFi Stadium, Los Angeles",Runner-up Group A,Runner-up Group B,South Korea,Canada,South Korea,Canada,1,0,9,4,0,home,False,1-0,1,4,South Korea,False
+74,knockout,,Round of 32,1.0,2026-06-29T17:00:00Z,"NRG Stadium, Houston",Winner Group C,Runner-up Group F,Brazil,Japan,Brazil,Japan,1,0,9,4,0,home,False,1-0,1,4,Brazil,False
+75,knockout,,Round of 32,1.0,2026-06-29T20:30:00Z,"Gillette Stadium, Boston",Winner Group E,Best 3rd (Groups A/B/C/D/F),Germany,Scotland,Germany,Scotland,1,0,11,4,0,home,False,1-0,1,4,Germany,False
+76,knockout,,Round of 32,1.0,2026-06-30T01:00:00Z,"Estadio BBVA, Monterrey",Winner Group F,Runner-up Group C,Netherlands,Morocco,Netherlands,Morocco,1,0,8,4,0,home,False,1-0,1,4,Netherlands,False
+77,knockout,,Round of 32,1.0,2026-06-30T17:00:00Z,"AT&T Stadium, Dallas",Runner-up Group E,Runner-up Group I,Ecuador,Norway,Ecuador,Norway,1,0,8,3,0,home,False,1-0,1,3,Ecuador,False
+78,knockout,,Round of 32,1.0,2026-06-30T21:00:00Z,"MetLife Stadium, East Rutherford",Winner Group I,Best 3rd (Groups C/D/F/G/H),France,Paraguay,France,Paraguay,1,0,9,4,0,home,False,1-0,1,4,France,False
+79,knockout,,Round of 32,1.0,2026-07-01T01:00:00Z,"Estadio Azteca, Mexico City",Winner Group A,Best 3rd (Groups C/E/F/H/I),Mexico,Senegal,Mexico,Senegal,1,0,9,4,0,home,False,1-0,1,4,Mexico,False
+80,knockout,,Round of 32,1.0,2026-07-01T16:00:00Z,"Mercedes-Benz Stadium, Atlanta",Winner Group L,Best 3rd (Groups E/H/I/J/K),England,Cabo Verde,England,Cabo Verde,2,0,9,3,0,home,False,2-0,2,3,England,False
+81,knockout,,Round of 32,1.0,2026-07-01T20:00:00Z,"Lumen Field, Seattle",Winner Group G,Best 3rd (Groups A/E/H/I/J),Belgium,Czechia,Belgium,Czechia,2,0,11,4,0,home,False,2-0,2,4,Belgium,False
+82,knockout,,Round of 32,1.0,2026-07-02T00:00:00Z,"Levi's Stadium, Santa Clara",Winner Group D,Best 3rd (Groups B/E/F/I/J),USA,Sweden,USA,Sweden,1,0,10,4,0,home,False,1-0,1,4,USA,False
+83,knockout,,Round of 32,1.0,2026-07-02T19:00:00Z,"BMO Field, Toronto",Runner-up Group K,Runner-up Group L,Colombia,Panama,Colombia,Panama,1,0,9,4,0,home,False,1-0,1,4,Colombia,False
+84,knockout,,Round of 32,1.0,2026-07-02T23:00:00Z,"SoFi Stadium, Los Angeles",Winner Group H,Runner-up Group J,Spain,Austria,Spain,Austria,2,1,8,4,0,home,False,2-1,3,4,Spain,False
+85,knockout,,Round of 32,1.0,2026-07-03T03:00:00Z,"BC Place, Vancouver",Winner Group B,Best 3rd (Groups E/F/G/I/J),Switzerland,Egypt,Switzerland,Egypt,1,0,9,3,0,home,False,1-0,1,3,Switzerland,False
+86,knockout,,Round of 32,1.0,2026-07-03T18:00:00Z,"AT&T Stadium, Dallas",Runner-up Group D,Runner-up Group G,Turkiye,Iran,Turkiye,Iran,1,1,9,3,0,home,True,1-1,2,3,Turkiye,True
+87,knockout,,Round of 32,1.0,2026-07-03T22:00:00Z,"Hard Rock Stadium, Miami",Winner Group J,Runner-up Group H,Argentina,Uruguay,Argentina,Uruguay,1,0,8,5,0,home,False,1-0,1,5,Argentina,False
+88,knockout,,Round of 32,1.0,2026-07-04T01:30:00Z,"GEHA Field at Arrowhead Stadium, Kansas City",Winner Group K,Best 3rd (Groups D/E/I/J/L),Portugal,Croatia,Portugal,Croatia,2,1,10,4,0,home,False,2-1,3,4,Portugal,False
+89,knockout,,Round of 16,2.0,2026-07-04T17:00:00Z,"NRG Stadium, Houston",Winner Match 73,Winner Match 75,South Korea,Germany,South Korea,Germany,1,1,10,4,0,away,True,1-1,2,4,Germany,True
+90,knockout,,Round of 16,2.0,2026-07-04T21:00:00Z,"Lincoln Financial Field, Philadelphia",Winner Match 74,Winner Match 77,Brazil,Ecuador,Brazil,Ecuador,1,0,8,4,0,home,False,1-0,1,4,Brazil,False
+91,knockout,,Round of 16,2.0,2026-07-05T20:00:00Z,"MetLife Stadium, East Rutherford",Winner Match 76,Winner Match 78,Netherlands,France,Netherlands,France,1,1,8,4,0,away,True,1-1,2,4,France,True
+92,knockout,,Round of 16,2.0,2026-07-06T00:00:00Z,"Estadio Azteca, Mexico City",Winner Match 79,Winner Match 80,Mexico,England,Mexico,England,0,1,10,4,0,away,False,0-1,1,4,England,False
+93,knockout,,Round of 16,2.0,2026-07-06T19:00:00Z,"AT&T Stadium, Dallas",Winner Match 83,Winner Match 84,Colombia,Spain,Colombia,Spain,1,1,9,4,0,away,True,1-1,2,4,Spain,True
+94,knockout,,Round of 16,2.0,2026-07-07T00:00:00Z,"Lumen Field, Seattle",Winner Match 81,Winner Match 82,Belgium,USA,Belgium,USA,2,0,10,4,0,home,False,2-0,2,4,Belgium,False
+95,knockout,,Round of 16,2.0,2026-07-07T16:00:00Z,"Mercedes-Benz Stadium, Atlanta",Winner Match 86,Winner Match 88,Turkiye,Portugal,Turkiye,Portugal,1,1,10,4,0,away,True,1-1,2,4,Portugal,True
+96,knockout,,Round of 16,2.0,2026-07-07T20:00:00Z,"BC Place, Vancouver",Winner Match 85,Winner Match 87,Switzerland,Argentina,Switzerland,Argentina,0,2,8,4,0,away,False,0-2,2,4,Argentina,False
+97,knockout,,Quarter-final,4.0,2026-07-09T20:00:00Z,"Gillette Stadium, Boston",Winner Match 89,Winner Match 90,Germany,Brazil,Germany,Brazil,1,1,10,4,0,away,True,1-1,2,4,Brazil,True
+98,knockout,,Quarter-final,4.0,2026-07-10T19:00:00Z,"SoFi Stadium, Los Angeles",Winner Match 93,Winner Match 94,Spain,Belgium,Spain,Belgium,2,1,10,4,0,home,False,2-1,3,4,Spain,False
+99,knockout,,Quarter-final,4.0,2026-07-11T21:00:00Z,"Hard Rock Stadium, Miami",Winner Match 91,Winner Match 92,France,England,France,England,1,1,9,3,0,home,True,1-1,2,3,France,True
+100,knockout,,Quarter-final,4.0,2026-07-12T01:00:00Z,"GEHA Field at Arrowhead Stadium, Kansas City",Winner Match 95,Winner Match 96,Portugal,Argentina,Portugal,Argentina,1,1,8,5,0,away,True,1-1,2,5,Argentina,True
+101,knockout,,Semi-final,8.0,2026-07-14T19:00:00Z,"AT&T Stadium, Dallas",Winner Match 97,Winner Match 98,Brazil,Spain,Brazil,Spain,1,1,9,4,0,away,True,1-1,2,4,Spain,True
+102,knockout,,Semi-final,8.0,2026-07-15T19:00:00Z,"Mercedes-Benz Stadium, Atlanta",Winner Match 99,Winner Match 100,France,Argentina,France,Argentina,1,1,8,5,0,away,True,1-1,2,5,Argentina,True
+103,knockout,,Third-place playoff,8.0,2026-07-18T21:00:00Z,"Hard Rock Stadium, Miami",Loser Match 101,Loser Match 102,Brazil,France,Brazil,France,1,1,9,4,0,away,True,1-1,2,4,France,True
+104,knockout,,Final,16.0,2026-07-19T19:00:00Z,"MetLife Stadium, East Rutherford",Winner Match 101,Winner Match 102,Spain,Argentina,Spain,Argentina,1,1,8,4,0,home,True,1-1,2,4,Spain,True

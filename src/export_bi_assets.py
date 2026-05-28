@@ -168,7 +168,31 @@ def _flatten_metric_targets(metrics: dict[str, object]) -> pd.DataFrame:
                 "status": metric_config["status"],
             }
         )
+    reconciled_holdout = metrics.get("reconciled_holdout", {})
+    if isinstance(reconciled_holdout, dict):
+        blended_outcome_accuracy = float(reconciled_holdout["match_outcome_accuracy"])
+        rows.append(
+            {
+                "metric_name": "blended_scoreline_outcome_accuracy",
+                "current_value": blended_outcome_accuracy,
+                "direction": "higher",
+                "guardrail": 0.58,
+                "target": 0.62,
+                "stretch": 0.65,
+                "status": _metric_status(blended_outcome_accuracy, 0.58, 0.62, 0.65),
+            }
+        )
     return pd.DataFrame(rows)
+
+
+def _metric_status(value: float, guardrail: float, target: float, stretch: float) -> str:
+    if value >= stretch:
+        return "stretch"
+    if value >= target:
+        return "target"
+    if value >= guardrail:
+        return "guardrail"
+    return "below_guardrail"
 
 
 def _build_dashboard_data_quality(validation: dict[str, object]) -> pd.DataFrame:
