@@ -113,3 +113,12 @@ def test_streamlit_table_helper_omits_none_height() -> None:
 
     assert "st.dataframe(table, use_container_width=True, hide_index=True, height=height)" not in source
     assert 'if height is not None:' in source
+
+
+def test_dashboard_includes_portfolio_case_study_story() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+
+    assert "Project Story" in source
+    assert "Analytics Engineering Pipeline" in source
+    assert "features_historical_match_training" in source
+    assert "Why These Targets Matter" in source

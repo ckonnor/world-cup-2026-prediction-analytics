@@ -38,6 +38,104 @@ PALETTE = {
     "subtle": "#f8fafc",
 }
 PLOT_CONFIG = {"displayModeBar": False}
+PROJECT_PILLARS = [
+    (
+        "Data product",
+        "Published BI layer",
+        "A public dashboard reads committed BI extracts, while raw files and the DuckDB warehouse stay local.",
+        "Separates stakeholder consumption from private source files.",
+    ),
+    (
+        "dbt ownership",
+        "Auditable SQL transformations",
+        "dbt handles source cleanup, point-in-time feature engineering, marts, BI contracts, and quality checks.",
+        "Keeps the transformation layer out of ad hoc notebook logic.",
+    ),
+    (
+        "Model discipline",
+        "Consistent predictions",
+        "Python trains expected-goal and outcome models, then reconciles them through calibrated score grids.",
+        "Keeps the final scoreline, winner, and bracket in agreement.",
+    ),
+    (
+        "Competition realism",
+        "Conservative scorelines",
+        "The final scoring mix favors common tournament scorelines such as 1-0, 1-1, and 2-1.",
+        "Exact scores are noisy, so realism matters alongside confidence.",
+    ),
+]
+PIPELINE_STEPS = [
+    (
+        "1",
+        "Raw sources",
+        "DataCamp fixtures, Kaggle international results, FIFA rankings, squads, corners, and cards.",
+    ),
+    (
+        "2",
+        "dbt staging",
+        "Normalize names, parse dates, preserve source fields, and resolve 2026 playoff placeholders.",
+    ),
+    (
+        "3",
+        "dbt marts",
+        "Publish team strength, latest rankings, squad strength, event profiles, and fixture tables.",
+    ),
+    (
+        "4",
+        "Feature layer",
+        "Build historical training rows and 2026 scoring rows with point-in-time feature integrity.",
+    ),
+    (
+        "5",
+        "Python model",
+        "Train goal and outcome models, calibrate scorelines, simulate groups, and resolve the bracket.",
+    ),
+    (
+        "6",
+        "BI contracts",
+        "Export dashboard snapshots, model metrics, quality checks, and DataCamp-ready submission files.",
+    ),
+]
+MODEL_LAYERS = [
+    (
+        "Expected goals",
+        "Poisson regression predicts home and away goals from dbt-built form, ranking, Elo, and host features.",
+    ),
+    (
+        "Direct outcome",
+        "A classifier estimates home, draw, and away probabilities with stronger player aggregate signals.",
+    ),
+    (
+        "Reconciled scoreline",
+        "A Poisson score grid is reweighted by outcome probability so the submitted score and winner agree.",
+    ),
+    (
+        "Tournament simulator",
+        "Group tables drive knockout participants, and tied knockout scorelines are resolved as penalties.",
+    ),
+]
+TARGET_RATIONALE = [
+    (
+        "Blended outcome",
+        "Primary",
+        "This is the cleanest final-answer metric because the competition submission is an exact scoreline, but that scoreline must still imply the right winner or draw.",
+    ),
+    (
+        "Direct outcome",
+        "Benchmark",
+        "This isolates the winner-picking model from score rounding. Around 62% is a realistic public-data target for international soccer without betting odds or live injury news.",
+    ),
+    (
+        "Exact score",
+        "High-value",
+        "Exact scores are volatile but heavily rewarded. The model intentionally keeps many results near common low-scoring outcomes such as 1-0 and 1-1.",
+    ),
+    (
+        "Goals MAE",
+        "Guardrail",
+        "MAE prevents the model from gaming exact-score frequency by predicting the same conservative result everywhere.",
+    ),
+]
 
 px.defaults.template = "plotly_white"
 
@@ -254,6 +352,122 @@ st.markdown(
             font-size: 0.9rem;
             line-height: 1.42;
         }
+        .story-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 0.75rem 0 1rem;
+        }
+        .story-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            padding: 0.95rem 1rem;
+            min-height: 12.5rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .story-kicker {
+            color: var(--teal);
+            font-size: 0.72rem;
+            font-weight: 760;
+            margin-bottom: 0.45rem;
+            text-transform: uppercase;
+        }
+        .story-title {
+            color: var(--ink);
+            font-size: 1.08rem;
+            font-weight: 760;
+            line-height: 1.22;
+            margin-bottom: 0.45rem;
+        }
+        .story-body {
+            color: #475569;
+            font-size: 0.88rem;
+            line-height: 1.42;
+        }
+        .story-note {
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.8rem;
+            line-height: 1.35;
+            margin-top: 0.75rem;
+            padding-top: 0.65rem;
+        }
+        .pipeline-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin: 0.75rem 0 1.1rem;
+        }
+        .pipeline-step {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            min-height: 11.8rem;
+            padding: 0.85rem;
+            position: relative;
+        }
+        .pipeline-number {
+            align-items: center;
+            background: #e0f2fe;
+            border-radius: 999px;
+            color: #075985;
+            display: inline-flex;
+            font-size: 0.78rem;
+            font-weight: 780;
+            height: 1.65rem;
+            justify-content: center;
+            margin-bottom: 0.65rem;
+            width: 1.65rem;
+        }
+        .pipeline-title {
+            color: var(--ink);
+            font-size: 0.95rem;
+            font-weight: 760;
+            line-height: 1.2;
+            margin-bottom: 0.4rem;
+        }
+        .pipeline-body {
+            color: #475569;
+            font-size: 0.8rem;
+            line-height: 1.35;
+        }
+        .method-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 0.75rem 0 1rem;
+        }
+        .method-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.9rem 1rem;
+        }
+        .method-title {
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 760;
+            line-height: 1.2;
+            margin-bottom: 0.4rem;
+        }
+        .method-body {
+            color: #475569;
+            font-size: 0.88rem;
+            line-height: 1.42;
+        }
+        .priority-badge {
+            border-radius: 999px;
+            background: var(--subtle);
+            border: 1px solid var(--border);
+            color: #334155;
+            display: inline-flex;
+            font-size: 0.7rem;
+            font-weight: 760;
+            margin-bottom: 0.45rem;
+            padding: 0.22rem 0.5rem;
+            text-transform: uppercase;
+        }
         .status-badge {
             border-radius: 999px;
             display: inline-flex;
@@ -439,7 +653,7 @@ st.markdown(
                 justify-content: flex-start;
                 margin-top: 0.75rem;
             }
-            .leader-strip, .prediction-grid {
+            .leader-strip, .prediction-grid, .story-grid, .pipeline-grid, .method-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -566,6 +780,33 @@ def insight_card(kicker: str, title: str, body: str) -> None:
             ]
         ),
         unsafe_allow_html=True,
+    )
+
+
+def story_card(kicker: str, title: str, body: str, note: str | None = None) -> str:
+    note_html = f'<div class="story-note">{safe(note)}</div>' if note else ""
+    return "\n".join(
+        [
+            '<div class="story-card">',
+            f'<div class="story-kicker">{safe(kicker)}</div>',
+            f'<div class="story-title">{safe(title)}</div>',
+            f'<div class="story-body">{safe(body)}</div>',
+            note_html,
+            "</div>",
+        ]
+    )
+
+
+def method_card(title: str, body: str, badge: str | None = None) -> str:
+    badge_html = f'<div class="priority-badge">{safe(badge)}</div>' if badge else ""
+    return "\n".join(
+        [
+            '<div class="method-card">',
+            badge_html,
+            f'<div class="method-title">{safe(title)}</div>',
+            f'<div class="method-body">{safe(body)}</div>',
+            "</div>",
+        ]
     )
 
 
@@ -792,11 +1033,11 @@ def render_header() -> None:
         <div class="app-header">
             <div class="title-row">
                 <div>
-                    <div class="eyebrow">Analytics Engineering Portfolio Project</div>
+                    <div class="eyebrow">Analytics Engineering Portfolio Case Study</div>
                     <h1 class="app-title">FIFA World Cup 2026 Prediction Analytics</h1>
                     <p class="app-subtitle">
-                        A modeled tournament forecast built from dbt feature marts, FIFA rankings,
-                        international results, squad profiles, and Python simulation logic.
+                        A senior-level forecasting data product built from dbt feature marts, FIFA rankings,
+                        international results, squad profiles, event signals, and calibrated Python simulation logic.
                     </p>
                 </div>
                 <div class="stack-pills">
@@ -906,6 +1147,148 @@ def render_leader_card(matches: pd.DataFrame) -> None:
     )
 
 
+def render_project_story(
+    matches: pd.DataFrame,
+    metrics: pd.DataFrame,
+    quality: pd.DataFrame,
+    history: pd.DataFrame,
+) -> None:
+    section_header(
+        "Project Story",
+        "This dashboard is designed as an analytics engineering case study: a tested dbt warehouse feeds a calibrated Python forecast, then publishes a stakeholder-ready BI layer.",
+    )
+    st.markdown(
+        '<div class="story-grid">'
+        + "".join(story_card(kicker, title, body, note) for kicker, title, body, note in PROJECT_PILLARS)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    metric_cols = st.columns(4)
+    with metric_cols[0]:
+        metric_card(
+            "Blended outcome",
+            pct(metric_value(metrics, "blended_scoreline_outcome_accuracy")),
+            "Final scoreline result accuracy",
+        )
+    with metric_cols[1]:
+        metric_card(
+            "Exact score",
+            pct(metric_value(metrics, "reconciled_scoreline_exact_accuracy")),
+            "Stretch target cleared",
+        )
+    with metric_cols[2]:
+        metric_card(
+            "Average goals MAE",
+            f"{metric_value(metrics, 'average_goals_mae'):.3f}",
+            "Lower is better",
+        )
+    with metric_cols[3]:
+        valid_check = quality.loc[
+            (quality["check_group"] == "submission_validation")
+            & (quality["check_name"] == "valid"),
+            "check_value",
+        ]
+        metric_card(
+            "Submission checks",
+            "Passed" if valid_check.tolist() == [1] else "Review",
+            "104 predicted matches",
+        )
+
+    section_header(
+        "Analytics Engineering Pipeline",
+        "The main design choice is separation of concerns: dbt prepares trusted data products, Python handles model state, and Streamlit consumes a stable BI snapshot.",
+    )
+    step_html = []
+    for number, title, body in PIPELINE_STEPS:
+        step_html.append(
+            "\n".join(
+                [
+                    '<div class="pipeline-step">',
+                    f'<div class="pipeline-number">{safe(number)}</div>',
+                    f'<div class="pipeline-title">{safe(title)}</div>',
+                    f'<div class="pipeline-body">{safe(body)}</div>',
+                    "</div>",
+                ]
+            )
+        )
+    st.markdown(f'<div class="pipeline-grid">{"".join(step_html)}</div>', unsafe_allow_html=True)
+
+    section_header(
+        "Model Design",
+        "The final submission is not one model pretending to solve every task. It is a reconciled system that keeps score, outcome, bracket, corners, and cards consistent.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(method_card(title, body) for title, body in MODEL_LAYERS)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    section_header(
+        "Why These Targets Matter",
+        "The targets are practical contracts for a low-scoring sport. They reward the exact-score competition objective without ignoring whether the forecast tells a believable tournament story.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(
+            method_card(title, body, priority) for title, priority, body in TARGET_RATIONALE
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    chart_cols = st.columns([0.95, 1.05])
+    with chart_cols[0]:
+        scorelines = (
+            matches["scoreline"]
+            .value_counts()
+            .head(8)
+            .rename_axis("scoreline")
+            .reset_index(name="matches")
+        )
+        fig = px.bar(
+            scorelines,
+            x="matches",
+            y="scoreline",
+            orientation="h",
+            labels={"matches": "Predicted matches", "scoreline": "Scoreline"},
+            color="matches",
+            color_continuous_scale=["#dbeafe", "#2563eb"],
+        )
+        fig = polish_figure(fig, 330)
+        fig.update_layout(showlegend=False, coloraxis_showscale=False)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="story_scoreline_distribution",
+        )
+
+    with chart_cols[1]:
+        recent_history = history[history["match_year"] >= 1992].copy()
+        history_summary = (
+            recent_history.groupby("match_year", as_index=False)
+            .agg(matches=("matches", "sum"), avg_total_goals=("avg_total_goals", "mean"))
+            .tail(35)
+        )
+        fig = px.line(
+            history_summary,
+            x="match_year",
+            y="avg_total_goals",
+            markers=True,
+            labels={"match_year": "Year", "avg_total_goals": "Average total goals"},
+        )
+        fig.update_traces(line_color=PALETTE["orange"])
+        fig = polish_figure(fig, 330)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="story_goal_environment",
+        )
+
+
 def render_executive_view(
     matches: pd.DataFrame,
     metrics: pd.DataFrame,
@@ -988,7 +1371,12 @@ def render_executive_view(
             hover_data=["fifa_rank", "last_10_points_per_match", "overall_star_power_z"],
         )
         fig = polish_figure(fig, 360)
-        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="executive_strength_index",
+        )
 
     with chart_cols[1]:
         scorelines = (
@@ -1009,7 +1397,12 @@ def render_executive_view(
         )
         fig = polish_figure(fig, 360)
         fig.update_layout(showlegend=False, coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="executive_scoreline_distribution",
+        )
 
 
 def team_line(team: str, goals: int, winner: str) -> str:
@@ -1126,7 +1519,12 @@ def render_groups(
         )
         fig = polish_figure(fig, 460)
         fig.update_layout(coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="group_points_summary",
+        )
 
     section_header(f"Group {group} Detail")
     group_standings = standings[standings["group_letter"] == group].copy()
@@ -1168,7 +1566,12 @@ def render_groups(
     )
     fig = polish_figure(fig, 280)
     fig.update_layout(coloraxis_showscale=False)
-    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=PLOT_CONFIG,
+        key="group_detail_points",
+    )
 
     section_header("Focused Group Matches")
     display_table(
@@ -1226,7 +1629,12 @@ def render_team_lens(
                 color_discrete_sequence=px.colors.qualitative.Set2,
             )
             fig = polish_figure(fig, 430)
-            st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config=PLOT_CONFIG,
+                key="team_lens_field_scatter",
+            )
 
         with chart_cols[1]:
             display_table(
@@ -1286,7 +1694,12 @@ def render_team_lens(
             )
             fig = polish_figure(fig, 350)
             fig.update_layout(coloraxis_showscale=False)
-            st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config=PLOT_CONFIG,
+                key=f"team_lens_signals_{selected_team}",
+            )
 
         with lens_cols[1]:
             journey = team_journey(matches, selected_team)
@@ -1495,9 +1908,43 @@ def render_model_evidence(
 ) -> None:
     section_header(
         "Model and Data Evidence",
-        "This page connects dashboard outputs back to validation targets and dbt data-quality checks.",
+        "This page connects dashboard outputs back to validation targets, modeling choices, and dbt data-quality checks.",
     )
     render_metric_cards(metrics)
+
+    section_header(
+        "Evaluation Contract",
+        "The model is judged through several lenses because a World Cup submission has to predict both a believable score and a usable tournament path.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(
+            [
+                method_card(
+                    "Time-based holdout",
+                    "Training uses matches before 2022, while holdout validation uses later matches. That keeps the evaluation closer to a real forecasting workflow.",
+                    "Validation",
+                ),
+                method_card(
+                    "Tournament calibration",
+                    "A 2018-2021 tournament-focused slice tuned draw behavior and the scoreline/outcome blend so the model does not overfit ordinary friendlies.",
+                    "Calibration",
+                ),
+                method_card(
+                    "Exact score emphasis",
+                    "Exact score is rare, but the competition rewards it heavily. Conservative outcomes such as 1-0 and 1-1 are common because they are both realistic and high-value.",
+                    "Scoring",
+                ),
+                method_card(
+                    "Outcome consistency",
+                    "The direct outcome model can be stronger than raw rounded scores, but the final submitted scoreline is reconciled so the winner, draw, and bracket do not disagree.",
+                    "Submission",
+                ),
+            ]
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
 
     metric_labels = {
         "rounded_scoreline_outcome_accuracy": "Rounded score outcome",
@@ -1546,7 +1993,12 @@ def render_model_evidence(
         )
         fig = polish_figure(fig, 360)
         fig.update_xaxes(range=[0, 70])
-        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="model_metrics_accuracy",
+        )
 
     with chart_cols[1]:
         quality_summary = quality.copy()
@@ -1562,7 +2014,12 @@ def render_model_evidence(
             color_discrete_sequence=px.colors.qualitative.Set2,
         )
         fig = polish_figure(fig, 360)
-        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="model_quality_checks",
+        )
 
     display_table(
         metric_frame,
@@ -1584,6 +2041,40 @@ def render_model_evidence(
         },
     )
 
+    section_header(
+        "dbt Usage in the Project",
+        "dbt is the analytics engineering backbone. It turns raw soccer files into trustworthy feature tables and dashboard marts before Python ever trains a model.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(
+            [
+                method_card(
+                    "Staging models",
+                    "Clean raw fixtures, rankings, results, squads, and event files into predictable names, types, and source-aware fields.",
+                    "Clean",
+                ),
+                method_card(
+                    "Feature models",
+                    "Build features_historical_match_training and 2026 scoring rows with rolling form, point-in-time ranking joins, Elo, squad, and event signals.",
+                    "Model",
+                ),
+                method_card(
+                    "Marts and BI models",
+                    "Publish team profiles, fixture schedules, group standings, model context, and dashboard-ready tables at stable grains.",
+                    "Serve",
+                ),
+                method_card(
+                    "Tests and contracts",
+                    "Protect row counts, uniqueness, accepted values, playoff-team resolution, feature coverage, and leakage prevention.",
+                    "Trust",
+                ),
+            ]
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
     section_header("Historical Goal Environment")
     recent_history = history[history["match_year"] >= 1992].copy()
     history_summary = (
@@ -1600,7 +2091,12 @@ def render_model_evidence(
     )
     fig.update_traces(line_color=PALETTE["orange"])
     fig = polish_figure(fig, 330)
-    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=PLOT_CONFIG,
+        key="model_goal_environment",
+    )
 
 
 def main() -> None:
@@ -1618,6 +2114,7 @@ def main() -> None:
 
     tabs = st.tabs(
         [
+            "Project Story",
             "Executive",
             "Bracket",
             "Groups",
@@ -1628,16 +2125,18 @@ def main() -> None:
     )
 
     with tabs[0]:
-        render_executive_view(matches, metrics, teams, selected_team)
+        render_project_story(matches, metrics, quality, history)
     with tabs[1]:
-        render_bracket(matches, selected_team)
+        render_executive_view(matches, metrics, teams, selected_team)
     with tabs[2]:
-        render_groups(matches, standings, teams, selected_group, selected_team)
+        render_bracket(matches, selected_team)
     with tabs[3]:
-        render_team_lens(teams, matches, selected_team)
+        render_groups(matches, standings, teams, selected_group, selected_team)
     with tabs[4]:
-        render_matches(matches, context, selected_group, selected_team)
+        render_team_lens(teams, matches, selected_team)
     with tabs[5]:
+        render_matches(matches, context, selected_group, selected_team)
+    with tabs[6]:
         render_model_evidence(metrics, quality, history)
 
 
