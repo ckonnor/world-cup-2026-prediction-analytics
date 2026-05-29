@@ -77,6 +77,11 @@ def test_dashboard_group_and_team_contracts() -> None:
 
     assert len(standings) == 48
     assert len(teams) == 48
+    assert {
+        "current_elo",
+        "last_10_adjusted_points_per_match",
+        "last_10_adjusted_goal_diff_per_match",
+    }.issubset(teams.columns)
     assert teams["team_name"].is_unique
     assert standings[["group_letter", "team_name"]].drop_duplicates().shape[0] == 48
     assert set(standings["group_letter"]) == set("ABCDEFGHIJKL")
@@ -128,6 +133,7 @@ def test_team_profile_table_explains_model_columns() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
     assert "st.column_config.Column(help=help_text)" in source
+    assert "Current team Elo after historical international results" in source
     assert "Latest FIFA ranking points" in source
-    assert "Average points per match across the team's ten most recent international matches" in source
+    assert "Average points above or below Elo expectation" in source
     assert "Coverage is a data-completeness check" in source

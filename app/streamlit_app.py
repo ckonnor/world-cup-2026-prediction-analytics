@@ -711,15 +711,23 @@ def normalize_series(series: pd.Series) -> pd.Series:
 
 def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
     enriched = teams.copy()
+    if "current_elo" not in enriched.columns:
+        enriched["current_elo"] = 1500.0
+    if "last_10_adjusted_points_per_match" not in enriched.columns:
+        enriched["last_10_adjusted_points_per_match"] = 0.0
+    if "last_10_adjusted_goal_diff_per_match" not in enriched.columns:
+        enriched["last_10_adjusted_goal_diff_per_match"] = 0.0
     fifa_points_score = normalize_series(enriched["fifa_points"])
     rank_score = 100 - normalize_series(enriched["fifa_rank"])
+    elo_score = normalize_series(enriched["current_elo"])
     star_score = normalize_series(enriched["overall_star_power_z"])
-    form_score = normalize_series(enriched["last_10_points_per_match"])
+    adjusted_form_score = normalize_series(enriched["last_10_adjusted_points_per_match"])
     enriched["dashboard_strength_index"] = (
-        0.34 * fifa_points_score
-        + 0.26 * rank_score
-        + 0.24 * star_score
-        + 0.16 * form_score
+        0.30 * fifa_points_score
+        + 0.24 * rank_score
+        + 0.22 * elo_score
+        + 0.14 * star_score
+        + 0.10 * adjusted_form_score
     ).round(1)
     return enriched
 
@@ -1019,8 +1027,9 @@ def team_signal_scores(teams: pd.DataFrame, team: str) -> pd.DataFrame:
     row = teams.loc[teams["team_name"] == team].iloc[0]
     signals = [
         ("FIFA points", "fifa_points", True),
-        ("Recent form", "last_10_points_per_match", True),
-        ("Goal difference", "last_10_goal_diff_per_match", True),
+        ("Elo rating", "current_elo", True),
+        ("Adjusted form", "last_10_adjusted_points_per_match", True),
+        ("Adjusted goal difference", "last_10_adjusted_goal_diff_per_match", True),
         ("Squad star power", "overall_star_power_z", True),
         ("Attack profile", "attacking_star_power_z", True),
     ]
@@ -1374,7 +1383,12 @@ def render_executive_view(
             labels={"dashboard_strength_index": "Strength index", "team_name": ""},
             color="confederation",
             color_discrete_sequence=px.colors.qualitative.Set2,
-            hover_data=["fifa_rank", "last_10_points_per_match", "overall_star_power_z"],
+            hover_data=[
+                "fifa_rank",
+                "current_elo",
+                "last_10_adjusted_points_per_match",
+                "overall_star_power_z",
+            ],
         )
         fig = polish_figure(fig, 360)
         st.plotly_chart(
@@ -1615,7 +1629,7 @@ def render_team_lens(
     if selected_team == "All teams":
         section_header(
             "Team Lens",
-            "The field view compares ranking, form, squad signal, and the dashboard composite strength index.",
+            "The field view compares ranking, Elo, opponent-adjusted form, squad signal, and the dashboard composite strength index.",
         )
         chart_cols = st.columns([1.05, 0.95])
         with chart_cols[0]:
@@ -1624,13 +1638,13 @@ def render_team_lens(
                 x="fifa_points",
                 y="overall_star_power_z",
                 color="confederation",
-                size="last_10_points_per_match",
+                size="current_elo",
                 hover_name="team_name",
                 labels={
                     "fifa_points": "FIFA points",
                     "overall_star_power_z": "Squad star power",
                     "confederation": "Confederation",
-                    "last_10_points_per_match": "Last 10 PPM",
+                    "current_elo": "Elo",
                 },
                 color_discrete_sequence=px.colors.qualitative.Set2,
             )
@@ -1649,16 +1663,18 @@ def render_team_lens(
                     "team_name",
                     "group_letter",
                     "fifa_rank",
+                    "current_elo",
                     "dashboard_strength_index",
-                    "last_10_points_per_match",
+                    "last_10_adjusted_points_per_match",
                     "overall_star_power_z",
                 ],
                 {
                     "team_name": "Team",
                     "group_letter": "Group",
                     "fifa_rank": "Rank",
+                    "current_elo": "Elo",
                     "dashboard_strength_index": "Strength",
-                    "last_10_points_per_match": "Form",
+                    "last_10_adjusted_points_per_match": "Adj Form",
                     "overall_star_power_z": "Star",
                 },
                 430,
@@ -1675,7 +1691,11 @@ def render_team_lens(
         with cards[1]:
             profile_card("FIFA rank", int(profile["fifa_rank"]), f"{profile['fifa_points']:.0f} points")
         with cards[2]:
-            profile_card("Recent form", f"{profile['last_10_points_per_match']:.2f}", "Points per match")
+            profile_card(
+                "Adjusted form",
+                signed(profile["last_10_adjusted_points_per_match"]),
+                "Points above Elo expectation",
+            )
         with cards[3]:
             profile_card("Strength", f"{profile['dashboard_strength_index']:.1f}", "Composite index")
         with cards[4]:
@@ -1727,9 +1747,10 @@ def render_team_lens(
             "team_name",
             "group_letter",
             "fifa_rank",
+            "current_elo",
             "fifa_points",
-            "last_10_points_per_match",
-            "last_10_goal_diff_per_match",
+            "last_10_adjusted_points_per_match",
+            "last_10_adjusted_goal_diff_per_match",
             "overall_star_power_z",
             "attacking_star_power_z",
             "avg_corners_for",
@@ -1741,9 +1762,10 @@ def render_team_lens(
             "team_name": "Team",
             "group_letter": "Group",
             "fifa_rank": "Rank",
+            "current_elo": "Elo",
             "fifa_points": "FIFA Points",
-            "last_10_points_per_match": "Form",
-            "last_10_goal_diff_per_match": "GD",
+            "last_10_adjusted_points_per_match": "Adj Form",
+            "last_10_adjusted_goal_diff_per_match": "Adj GD",
             "overall_star_power_z": "Star",
             "attacking_star_power_z": "Attack",
             "avg_corners_for": "Corners For",
@@ -1753,9 +1775,10 @@ def render_team_lens(
         },
         460,
         {
+            "current_elo": "Current team Elo after historical international results. Elo adjusts for opponent strength and match result surprise.",
             "fifa_points": "Latest FIFA ranking points. Higher values indicate stronger recent official FIFA performance.",
-            "last_10_points_per_match": "Average points per match across the team's ten most recent international matches.",
-            "last_10_goal_diff_per_match": "Average goal difference per match across the team's ten most recent international matches.",
+            "last_10_adjusted_points_per_match": "Average points above or below Elo expectation across the team's ten most recent international matches.",
+            "last_10_adjusted_goal_diff_per_match": "Average goal difference above or below an Elo-implied expectation across the team's ten most recent international matches.",
             "overall_star_power_z": "Squad star-power z-score across the tournament field. Positive values are above field average.",
             "attacking_star_power_z": "Attacking squad-strength z-score, weighted toward goals and top attacking contributors.",
             "dashboard_strength_index": "Dashboard composite index combining FIFA points, FIFA rank, recent form, and squad star power.",

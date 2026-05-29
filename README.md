@@ -70,7 +70,7 @@ The latest stable validation metrics are:
 
 | Metric | Result |
 | --- | ---: |
-| Direct outcome accuracy | 61.7% |
+| Direct outcome accuracy | 62.4% |
 | Blended scoreline outcome accuracy | 62.4% |
 | Exact score accuracy | 14.7% |
 | Average goals MAE | 0.907 |

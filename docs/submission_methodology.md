@@ -41,7 +41,7 @@ The key design choice is point-in-time modeling: historical match features only 
 The model has four prediction layers:
 
 1. Expected goals
-   - Poisson regression predicts home and away expected goals from prior form, FIFA rankings, and Elo features.
+   - Poisson regression predicts home and away expected goals from Elo opponent-adjusted form, FIFA rankings, and Elo features.
 
 2. Direct outcome
    - A histogram gradient boosting classifier predicts home/draw/away probabilities using dbt features plus external player aggregate and form signals.
@@ -49,7 +49,7 @@ The model has four prediction layers:
 3. Final scoreline
    - Python builds a Poisson score grid for plausible exact scores.
    - Each scoreline is blended with the direct outcome probability for that scoreline's result.
-   - Tournament-focused calibration selected a `0.25` outcome blend weight and a `0.35` draw threshold.
+   - Tournament-focused calibration selected a `0.30` outcome blend weight and a `0.35` draw threshold.
 
 4. Events
    - Corners and cards are predicted from dbt-built team event profiles.
@@ -68,7 +68,7 @@ Current holdout metrics:
 
 | Metric | Value |
 | --- | ---: |
-| Direct outcome accuracy | 61.7% |
+| Direct outcome accuracy | 62.4% |
 | Blended scoreline outcome accuracy | 62.4% |
 | Exact score accuracy | 14.7% |
 | Average goals MAE | 0.907 |

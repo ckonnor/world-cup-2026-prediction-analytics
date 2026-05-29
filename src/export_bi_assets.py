@@ -11,6 +11,7 @@ from world_cup.paths import (
     BI_EXPORT_DIR,
     DUCKDB_PATH,
     MODEL_METRICS_V2_PATH,
+    MODEL_TEAM_FEATURES_V2_PATH,
     SUBMISSION_GROUP_PREDICTIONS_PATH,
     SUBMISSION_KNOCKOUT_PREDICTIONS_PATH,
     SUBMISSION_VALIDATION_PATH,
@@ -252,6 +253,7 @@ def export_bi_assets() -> list[Path]:
         [
             DUCKDB_PATH,
             MODEL_METRICS_V2_PATH,
+            MODEL_TEAM_FEATURES_V2_PATH,
             SUBMISSION_GROUP_PREDICTIONS_PATH,
             SUBMISSION_KNOCKOUT_PREDICTIONS_PATH,
             SUBMISSION_VALIDATION_PATH,
@@ -262,6 +264,7 @@ def export_bi_assets() -> list[Path]:
     group_predictions = pd.read_csv(SUBMISSION_GROUP_PREDICTIONS_PATH)
     knockout_predictions = pd.read_csv(SUBMISSION_KNOCKOUT_PREDICTIONS_PATH)
     metrics = json.loads(MODEL_METRICS_V2_PATH.read_text(encoding="utf-8"))
+    model_team_features = pd.read_csv(MODEL_TEAM_FEATURES_V2_PATH)
     validation = json.loads(SUBMISSION_VALIDATION_PATH.read_text(encoding="utf-8"))
 
     exports = {
@@ -277,6 +280,11 @@ def export_bi_assets() -> list[Path]:
     }
     for output_name, table_name in BI_TABLES.items():
         exports[output_name] = _load_dbt_table(table_name)
+    exports["dashboard_team_profiles.csv"] = exports["dashboard_team_profiles.csv"].merge(
+        model_team_features,
+        on="team_model_name",
+        how="left",
+    )
 
     written_paths = []
     for output_name, frame in exports.items():

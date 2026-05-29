@@ -25,7 +25,7 @@ The hosted dashboard reads CSV snapshots from `app/data/`. These are treated as 
 | --- | --- | --- |
 | `dashboard_match_predictions.csv` | One row per tournament match | 104 rows, unique `match_id`, 72 group rows, 32 knockout rows, scoreline and winner fields populated. |
 | `dashboard_group_standings.csv` | One row per team per group | 48 rows, one team per group entry, groups A through L present. |
-| `dashboard_team_profiles.csv` | One row per team | 48 unique teams, ranking/form/squad/event fields present, completeness score between 0 and 1. |
+| `dashboard_team_profiles.csv` | One row per team | 48 unique teams, ranking, Elo, adjusted-form, squad, event, and completeness fields present. |
 | `dashboard_match_feature_context.csv` | One row per group-stage match | 72 rows of pre-match explanatory feature differences. |
 | `dashboard_model_metrics.csv` | One row per model metric | Five tracked metrics with target, guardrail, stretch, and status. |
 | `dashboard_data_quality.csv` | One row per validation check | Submission validity and row-count checks for group, knockout, and combined predictions. |

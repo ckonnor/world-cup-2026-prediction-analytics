@@ -22,22 +22,23 @@ from world_cup.paths import (
     MODEL_KNOCKOUT_PREDICTIONS_V2_PATH,
     MODEL_METRICS_V2_PATH,
     MODEL_PREDICTIONS_V2_PATH,
+    MODEL_TEAM_FEATURES_V2_PATH,
     PROCESSED_DIR,
 )
 
 
 BASE_FEATURE_COLUMNS = [
     "neutral",
-    "home_prior_10_points_per_match",
-    "away_prior_10_points_per_match",
-    "home_prior_10_goal_diff_per_match",
-    "away_prior_10_goal_diff_per_match",
+    "home_prior_10_adjusted_points_per_match",
+    "away_prior_10_adjusted_points_per_match",
+    "home_prior_10_adjusted_goal_diff_per_match",
+    "away_prior_10_adjusted_goal_diff_per_match",
     "home_prior_10_goals_for_per_match",
     "away_prior_10_goals_for_per_match",
     "home_prior_10_goals_against_per_match",
     "away_prior_10_goals_against_per_match",
-    "prior_10_points_per_match_diff",
-    "prior_10_goal_diff_per_match_diff",
+    "prior_10_adjusted_points_per_match_diff",
+    "prior_10_adjusted_goal_diff_per_match_diff",
     "prior_10_goals_for_per_match_diff",
     "prior_10_goals_against_per_match_diff",
 ]
@@ -129,7 +130,7 @@ KNOCKOUT_YELLOW_CARD_ADJUSTMENTS = {
     "Final": 0.50,
 }
 KNOCKOUT_RED_CARD_ADJUSTMENT_FACTOR = 0.08
-MIN_CALIBRATED_DRAW_RATE = 0.10
+MIN_CALIBRATED_DRAW_RATE = 0.09
 TOURNAMENT_CALIBRATION_START = pd.Timestamp("2018-01-01")
 TOURNAMENT_FOCUSED_TOURNAMENTS = {
     "AFC Asian Cup",
@@ -198,6 +199,7 @@ class TrainedGoalModels:
     feature_medians: pd.Series
     outcome_feature_medians: pd.Series
     current_elo_ratings: dict[str, float]
+    current_adjusted_team_features: dict[str, dict[str, float]]
     selected_model_name: str
     selected_outcome_model_name: str
     outcome_classes: np.ndarray
@@ -301,6 +303,120 @@ def build_elo_features(results: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, f
         ratings[away_team] = away_elo - rating_change
 
     return pd.DataFrame(rows), ratings
+
+
+def _actual_result_score(goals_for: int, goals_against: int) -> float:
+    if goals_for > goals_against:
+        return 1.0
+    if goals_for < goals_against:
+        return 0.0
+    return 0.5
+
+
+def build_opponent_adjusted_form_features(
+    results: pd.DataFrame,
+    elo_features: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, dict[str, float]]]:
+    matches = results.merge(elo_features, on="result_id", how="inner").copy()
+    matches["match_date"] = pd.to_datetime(matches["match_date"])
+    matches = matches.sort_values(["match_date", "result_id"])
+
+    team_rows = []
+    for row in matches.itertuples(index=False):
+        home_team = canonical_team_name(row.home_team)
+        away_team = canonical_team_name(row.away_team)
+        expected_home = float(row.home_elo_expected_result)
+        expected_away = 1.0 - expected_home
+        home_actual_score = _actual_result_score(int(row.home_score), int(row.away_score))
+        away_actual_score = 1.0 - home_actual_score
+        home_goal_difference = int(row.home_score) - int(row.away_score)
+        away_goal_difference = -home_goal_difference
+        home_expected_goal_difference = 2.0 * (expected_home - 0.5)
+        away_expected_goal_difference = 2.0 * (expected_away - 0.5)
+
+        team_rows.extend(
+            [
+                {
+                    "result_id": row.result_id,
+                    "match_date": row.match_date,
+                    "team_name": home_team,
+                    "is_home_team": True,
+                    "adjusted_points": (3.0 * home_actual_score) - (3.0 * expected_home),
+                    "adjusted_goal_diff": home_goal_difference
+                    - home_expected_goal_difference,
+                },
+                {
+                    "result_id": row.result_id,
+                    "match_date": row.match_date,
+                    "team_name": away_team,
+                    "is_home_team": False,
+                    "adjusted_points": (3.0 * away_actual_score) - (3.0 * expected_away),
+                    "adjusted_goal_diff": away_goal_difference
+                    - away_expected_goal_difference,
+                },
+            ]
+        )
+
+    team_history = pd.DataFrame(team_rows).sort_values(["team_name", "match_date", "result_id"])
+    grouped = team_history.groupby("team_name", group_keys=False)
+    team_history["prior_10_adjusted_points_per_match"] = grouped["adjusted_points"].transform(
+        lambda series: series.shift(1).rolling(10, min_periods=1).mean()
+    )
+    team_history["prior_10_adjusted_goal_diff_per_match"] = grouped[
+        "adjusted_goal_diff"
+    ].transform(lambda series: series.shift(1).rolling(10, min_periods=1).mean())
+
+    home_form = team_history[team_history["is_home_team"]].rename(
+        columns={
+            "prior_10_adjusted_points_per_match": "home_prior_10_adjusted_points_per_match",
+            "prior_10_adjusted_goal_diff_per_match": (
+                "home_prior_10_adjusted_goal_diff_per_match"
+            ),
+        }
+    )
+    away_form = team_history[~team_history["is_home_team"]].rename(
+        columns={
+            "prior_10_adjusted_points_per_match": "away_prior_10_adjusted_points_per_match",
+            "prior_10_adjusted_goal_diff_per_match": (
+                "away_prior_10_adjusted_goal_diff_per_match"
+            ),
+        }
+    )
+    adjusted_match_features = home_form[
+        [
+            "result_id",
+            "home_prior_10_adjusted_points_per_match",
+            "home_prior_10_adjusted_goal_diff_per_match",
+        ]
+    ].merge(
+        away_form[
+            [
+                "result_id",
+                "away_prior_10_adjusted_points_per_match",
+                "away_prior_10_adjusted_goal_diff_per_match",
+            ]
+        ],
+        on="result_id",
+        how="inner",
+    )
+    adjusted_match_features["prior_10_adjusted_points_per_match_diff"] = (
+        adjusted_match_features["home_prior_10_adjusted_points_per_match"]
+        - adjusted_match_features["away_prior_10_adjusted_points_per_match"]
+    )
+    adjusted_match_features["prior_10_adjusted_goal_diff_per_match_diff"] = (
+        adjusted_match_features["home_prior_10_adjusted_goal_diff_per_match"]
+        - adjusted_match_features["away_prior_10_adjusted_goal_diff_per_match"]
+    )
+
+    current_features = {}
+    for team_name, team_frame in team_history.groupby("team_name"):
+        latest = team_frame.tail(10)
+        current_features[_normalise_text(team_name)] = {
+            "last_10_adjusted_points_per_match": float(latest["adjusted_points"].mean()),
+            "last_10_adjusted_goal_diff_per_match": float(latest["adjusted_goal_diff"].mean()),
+        }
+
+    return adjusted_match_features, current_features
 
 
 def _prepare_training_features(data: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
@@ -829,7 +945,11 @@ def train_goal_models(
     historical_results: pd.DataFrame,
 ) -> tuple[TrainedGoalModels, dict[str, object]]:
     elo_features, current_elo_ratings = build_elo_features(historical_results)
+    adjusted_form_features, current_adjusted_team_features = (
+        build_opponent_adjusted_form_features(historical_results, elo_features)
+    )
     model_data = training_data.merge(elo_features, on="result_id", how="inner")
+    model_data = model_data.merge(adjusted_form_features, on="result_id", how="inner")
     model_data = model_data.dropna(subset=FEATURE_COLUMNS + ["home_score", "away_score"]).copy()
     model_data["match_date"] = pd.to_datetime(model_data["match_date"])
     model_data = model_data.sort_values(["match_date", "result_id"]).reset_index(drop=True)
@@ -1063,6 +1183,7 @@ def train_goal_models(
         "reconciled_holdout": reconciled_holdout_metrics,
         "notes": [
             "V2 adds pre-match Elo features computed from historical international results and point-in-time FIFA ranking features.",
+            "Raw last-10 form and goal difference are replaced in the model by Elo opponent-adjusted rolling form features.",
             "The script compares Poisson regression and histogram gradient boosting with Poisson loss.",
             "A direct outcome classifier chooses home/draw/away using dbt features plus external player aggregate match features.",
             "External match context flags are excluded from the outcome model because they behaved like fixture-order leakage for neutral tournament rows.",
@@ -1084,6 +1205,7 @@ def train_goal_models(
             feature_medians=train_features.median(numeric_only=True),
             outcome_feature_medians=outcome_feature_medians,
             current_elo_ratings=current_elo_ratings,
+            current_adjusted_team_features=current_adjusted_team_features,
             selected_model_name=selected_metrics["model_type"],
             selected_outcome_model_name=selected_outcome_metrics["model_type"],
             outcome_classes=selected_outcome_classes,
@@ -1232,6 +1354,18 @@ def _elo_rating(team_name: object, models: TrainedGoalModels) -> float:
     return float(models.current_elo_ratings.get(canonical_team_name(team_name), DEFAULT_ELO))
 
 
+def _adjusted_team_metric(
+    team_name: object,
+    metric_name: str,
+    models: TrainedGoalModels,
+) -> float:
+    canonical_name = canonical_team_name(team_name)
+    team_features = models.current_adjusted_team_features.get(_normalise_text(canonical_name))
+    if team_features is None:
+        return np.nan
+    return float(team_features.get(metric_name, np.nan))
+
+
 def _team_tiebreak_strength(
     team_name: object,
     latest_fifa_rankings: pd.DataFrame,
@@ -1317,10 +1451,26 @@ def _prepare_world_cup_match_features(
         away_elo = _elo_rating(away_team, models)
         neutral = _is_neutral_world_cup_match(home_team, away_team)
 
-        home_points = _team_metric(home_team, "last_10_points_per_match", strength_lookup)
-        away_points = _team_metric(away_team, "last_10_points_per_match", strength_lookup)
-        home_goal_diff = _team_metric(home_team, "last_10_goal_diff_per_match", strength_lookup)
-        away_goal_diff = _team_metric(away_team, "last_10_goal_diff_per_match", strength_lookup)
+        home_adjusted_points = _adjusted_team_metric(
+            home_team,
+            "last_10_adjusted_points_per_match",
+            models,
+        )
+        away_adjusted_points = _adjusted_team_metric(
+            away_team,
+            "last_10_adjusted_points_per_match",
+            models,
+        )
+        home_adjusted_goal_diff = _adjusted_team_metric(
+            home_team,
+            "last_10_adjusted_goal_diff_per_match",
+            models,
+        )
+        away_adjusted_goal_diff = _adjusted_team_metric(
+            away_team,
+            "last_10_adjusted_goal_diff_per_match",
+            models,
+        )
         home_goals_for = _team_metric(home_team, "last_10_goals_for_per_match", strength_lookup)
         away_goals_for = _team_metric(away_team, "last_10_goals_for_per_match", strength_lookup)
         home_goals_against = _team_metric(
@@ -1401,16 +1551,20 @@ def _prepare_world_cup_match_features(
         rows.append(
             {
                 "neutral": neutral,
-                "home_prior_10_points_per_match": home_points,
-                "away_prior_10_points_per_match": away_points,
-                "home_prior_10_goal_diff_per_match": home_goal_diff,
-                "away_prior_10_goal_diff_per_match": away_goal_diff,
+                "home_prior_10_adjusted_points_per_match": home_adjusted_points,
+                "away_prior_10_adjusted_points_per_match": away_adjusted_points,
+                "home_prior_10_adjusted_goal_diff_per_match": home_adjusted_goal_diff,
+                "away_prior_10_adjusted_goal_diff_per_match": away_adjusted_goal_diff,
                 "home_prior_10_goals_for_per_match": home_goals_for,
                 "away_prior_10_goals_for_per_match": away_goals_for,
                 "home_prior_10_goals_against_per_match": home_goals_against,
                 "away_prior_10_goals_against_per_match": away_goals_against,
-                "prior_10_points_per_match_diff": home_points - away_points,
-                "prior_10_goal_diff_per_match_diff": home_goal_diff - away_goal_diff,
+                "prior_10_adjusted_points_per_match_diff": (
+                    home_adjusted_points - away_adjusted_points
+                ),
+                "prior_10_adjusted_goal_diff_per_match_diff": (
+                    home_adjusted_goal_diff - away_adjusted_goal_diff
+                ),
                 "prior_10_goals_for_per_match_diff": home_goals_for - away_goals_for,
                 "prior_10_goals_against_per_match_diff": home_goals_against
                 - away_goals_against,
@@ -1969,6 +2123,38 @@ def build_model_predictions(
     return combined.sort_values("_match_id_sort").drop(columns="_match_id_sort")
 
 
+def build_model_team_features(
+    team_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+) -> pd.DataFrame:
+    rows = []
+    for row in team_strength.sort_values("team_name").itertuples(index=False):
+        team_name = canonical_team_name(row.team_name)
+        rows.append(
+            {
+                "team_model_name": team_name,
+                "current_elo": round(_elo_rating(team_name, models), 1),
+                "last_10_adjusted_points_per_match": round(
+                    _adjusted_team_metric(
+                        team_name,
+                        "last_10_adjusted_points_per_match",
+                        models,
+                    ),
+                    3,
+                ),
+                "last_10_adjusted_goal_diff_per_match": round(
+                    _adjusted_team_metric(
+                        team_name,
+                        "last_10_adjusted_goal_diff_per_match",
+                        models,
+                    ),
+                    3,
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     training_data = _load_table("main_features.features_historical_match_training")
     world_cup_matches = _load_table("main_staging.stg_group_fixtures")
@@ -2048,6 +2234,7 @@ def main() -> None:
         models,
     )
     predictions = build_model_predictions(group_predictions, knockout_predictions)
+    model_team_features = build_model_team_features(team_strength, models)
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     MODEL_GROUP_PREDICTIONS_V2_PATH.write_text(
@@ -2060,6 +2247,10 @@ def main() -> None:
     )
     MODEL_PREDICTIONS_V2_PATH.write_text(
         predictions.to_csv(index=False),
+        encoding="utf-8",
+    )
+    MODEL_TEAM_FEATURES_V2_PATH.write_text(
+        model_team_features.to_csv(index=False),
         encoding="utf-8",
     )
     MODEL_METRICS_V2_PATH.write_text(
@@ -2099,6 +2290,7 @@ def main() -> None:
     print(f"Wrote group predictions to {MODEL_GROUP_PREDICTIONS_V2_PATH}")
     print(f"Wrote knockout predictions to {MODEL_KNOCKOUT_PREDICTIONS_V2_PATH}")
     print(f"Wrote combined predictions to {MODEL_PREDICTIONS_V2_PATH}")
+    print(f"Wrote team model features to {MODEL_TEAM_FEATURES_V2_PATH}")
     print(f"Wrote metrics to {MODEL_METRICS_V2_PATH}")
 
 

@@ -38,14 +38,17 @@ The selected model is the candidate with the lowest holdout average goal MAE.
 
 The model uses:
 
-- prior-10-match points, goal difference, goals for, and goals against for both teams
-- home minus away differences for those prior-form features
+- Elo opponent-adjusted prior-10-match points and goal difference for both teams
+- home minus away differences for those adjusted-form features
+- prior-10-match goals for and goals against for both teams
 - neutral-site flag, including host advantage for Canada, Mexico, and the United States
 - point-in-time FIFA rank and FIFA ranking points for both teams
 - FIFA rank and points differences
 - pre-match Elo rating for both teams
 - Elo difference and the Elo expected home result
 - external match-feature signals for the direct outcome model only: external Elo, EA Sports/FIFA-style player aggregate ratings, and external form fields
+
+Raw recent form is still visible in the dbt marts, but the trained goal and outcome models now use the Elo-adjusted version instead. Adjusted form is calculated as actual recent performance above or below the expected result implied by the opponent's pre-match Elo. This prevents a team from receiving the same form credit for beating weak opposition that it would receive for beating an elite opponent.
 
 After the trained model estimates expected goals, Python applies a small capped squad overlay for 2026 matches. This overlay compares each team's squad star-power z-scores:
 
@@ -87,15 +90,15 @@ Holdout home goals MAE: 0.985
 Holdout away goals MAE: 0.829
 Holdout average goals MAE: 0.907
 Raw rounded exact score accuracy: 0.106
-Raw rounded match outcome accuracy: 0.550
-Direct outcome accuracy: 0.617
+Raw rounded match outcome accuracy: 0.547
+Direct outcome accuracy: 0.624
 Blended scoreline outcome accuracy: 0.624
 Blended exact score accuracy: 0.147
 Selected draw threshold: 0.35
-Selected scoreline/outcome blend weight: 0.25
+Selected scoreline/outcome blend weight: 0.30
 ```
 
-For comparison, v1 had holdout match outcome accuracy of about `0.482`. The current direct outcome model is a stronger winner-picking signal than rounded scorelines, though it remains just below the 62% target by strict comparison. The blended Poisson scoreline selector clears the 62% outcome target, keeps exact-score accuracy above the stretch target, and produces a more realistic final outcome distribution than hard-forcing every scoreline to match the classifier's top result.
+For comparison, v1 had holdout match outcome accuracy of about `0.482`. Replacing raw recent form with Elo-adjusted form lifted direct outcome accuracy above the 62% target. The blended Poisson scoreline selector also clears the 62% outcome target, keeps exact-score accuracy above the stretch target, and produces a more realistic final outcome distribution than hard-forcing every scoreline to match the classifier's top result.
 
 ## Target Metrics
 
@@ -103,8 +106,8 @@ These are working targets for this project, not guarantees. The guardrail is the
 
 | Metric | Current | Guardrail | Target | Stretch | Direction |
 | --- | ---: | ---: | ---: | ---: | --- |
-| Rounded scoreline outcome accuracy | 55.0% | 54.5% | 57.0% | 60.0% | Higher is better |
-| Direct outcome accuracy | 61.7% | 58.0% | 62.0% | 65.0% | Higher is better |
+| Rounded scoreline outcome accuracy | 54.7% | 54.5% | 57.0% | 60.0% | Higher is better |
+| Direct outcome accuracy | 62.4% | 58.0% | 62.0% | 65.0% | Higher is better |
 | Reconciled scoreline exact accuracy | 14.7% | 10.0% | 12.0% | 14.0% | Higher is better |
 | Average goals MAE | 0.907 | 0.950 | 0.900 | 0.860 | Lower is better |
 
@@ -118,10 +121,11 @@ The model writes:
 data/processed/model_group_predictions_v2.csv
 data/processed/model_knockout_predictions_v2.csv
 data/processed/model_predictions_v2.csv
+data/processed/model_team_features_v2.csv
 data/processed/model_metrics_v2.json
 ```
 
-`model_group_predictions_v2.csv` and `model_knockout_predictions_v2.csv` match the two DataCamp workbook sections. `model_predictions_v2.csv` combines all 104 matches for local analysis.
+`model_group_predictions_v2.csv` and `model_knockout_predictions_v2.csv` match the two DataCamp workbook sections. `model_predictions_v2.csv` combines all 104 matches for local analysis. `model_team_features_v2.csv` publishes the Python-owned Elo and adjusted-form team features into the BI layer.
 
 ## Known Limitations
 

@@ -27,6 +27,7 @@ MODEL_GROUP_PREDICTIONS_V2_PATH = PROCESSED_DIR / "model_group_predictions_v2.cs
 MODEL_KNOCKOUT_PREDICTIONS_V2_PATH = PROCESSED_DIR / "model_knockout_predictions_v2.csv"
 MODEL_PREDICTIONS_V2_PATH = PROCESSED_DIR / "model_predictions_v2.csv"
 MODEL_METRICS_V2_PATH = PROCESSED_DIR / "model_metrics_v2.json"
+MODEL_TEAM_FEATURES_V2_PATH = PROCESSED_DIR / "model_team_features_v2.csv"
 SUBMISSION_GROUP_PREDICTIONS_PATH = PROCESSED_DIR / "submission_group_predictions.csv"
 SUBMISSION_KNOCKOUT_PREDICTIONS_PATH = PROCESSED_DIR / "submission_knockout_predictions.csv"
 SUBMISSION_PREDICTIONS_PATH = PROCESSED_DIR / "submission_predictions.csv"

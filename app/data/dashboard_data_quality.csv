@@ -2,9 +2,9 @@ check_group,check_name,check_value
 row_count,group_predictions,72
 row_count,knockout_predictions,32
 row_count,combined_predictions,104
-group_result_distribution,home,42
-group_result_distribution,draw,22
-group_result_distribution,away,8
-knockout_penalties,False,20
-knockout_penalties,True,12
+group_result_distribution,home,44
+group_result_distribution,draw,23
+group_result_distribution,away,5
+knockout_penalties,False,21
+knockout_penalties,True,11
 submission_validation,valid,1
