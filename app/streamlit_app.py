@@ -136,6 +136,48 @@ TARGET_RATIONALE = [
         "MAE prevents the model from gaming exact-score frequency by predicting the same conservative result everywhere.",
     ),
 ]
+TRAINING_SIGNAL_CARDS = [
+    (
+        "Historical results",
+        "Core training target",
+        "Kaggle international match results provide scores, outcomes, rolling form, and Elo history. These fields feed both expected-goals models and the direct outcome model; their influence is learned during model training.",
+    ),
+    (
+        "FIFA rankings",
+        "Learned model signal",
+        "Official FIFA ranking snapshots and historical ranking data supply rank, points, and team-to-team differences. These are part of the goal and outcome feature set, with weights learned by the selected model.",
+    ),
+    (
+        "Opponent-adjusted form",
+        "Learned model signal",
+        "Recent form is adjusted against pre-match Elo expectation, so beating weak teams is not worth the same as beating strong teams. The trained models use adjusted points and adjusted goal-difference features.",
+    ),
+    (
+        "Elo ratings",
+        "Learned + rules signal",
+        "Elo is derived from historical international results and captures long-run team strength. It is learned by the score and outcome models, then also used in knockout penalty tiebreak logic.",
+    ),
+    (
+        "Player-quality aggregates",
+        "Outcome model only",
+        "The external Kaggle match-feature dataset provides EA/FIFA-style country player aggregates such as average overall, max overall, attack, defense, pace, shooting, and passing. These go into the direct outcome classifier, not the expected-goals model.",
+    ),
+    (
+        "Intl pedigree",
+        "Capped overlay",
+        "Current squad caps/goals from the World Cup squad table are not used as a fully trained historical feature because we lack old squad snapshots. They apply a small expected-goals overlay: 0.06 overall pedigree, 0.07 attack-vs-defense, 0.03 experience, capped at +/-0.35 goals.",
+    ),
+    (
+        "Corners and cards",
+        "Separate prediction layer",
+        "FootyStats match events and matched club-player discipline data estimate corners, yellow cards, and red cards. These are predicted separately from match outcome so card/corner noise does not distort scoreline training.",
+    ),
+    (
+        "Scoreline calibration",
+        "Calibrated blend",
+        "The final scoreline blends Poisson score likelihood with direct outcome probabilities. The blend weight and draw threshold are tuned on a tournament-focused validation slice rather than set by hand.",
+    ),
+]
 
 px.defaults.template = "plotly_white"
 
@@ -1223,6 +1265,67 @@ def render_project_story() -> None:
     st.markdown(f'<div class="pipeline-grid">{"".join(step_html)}</div>', unsafe_allow_html=True)
 
 
+def render_dbt_usage_section() -> None:
+    section_header(
+        "dbt Usage in the Project",
+        "dbt is the analytics engineering backbone. It turns raw soccer files into trustworthy feature tables and dashboard marts before Python ever trains a model.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(
+            [
+                method_card(
+                    "Staging models",
+                    "Clean raw fixtures, rankings, results, squads, and event files into predictable names, types, and source-aware fields.",
+                    "Clean",
+                ),
+                method_card(
+                    "Feature models",
+                    "Build features_historical_match_training and 2026 scoring rows with rolling form, point-in-time ranking joins, Elo, squad, and event signals.",
+                    "Model",
+                ),
+                method_card(
+                    "Marts and BI models",
+                    "Publish team profiles, fixture schedules, group standings, model context, and dashboard-ready tables at stable grains.",
+                    "Serve",
+                ),
+                method_card(
+                    "Tests and contracts",
+                    "Protect row counts, uniqueness, accepted values, playoff-team resolution, feature coverage, and leakage prevention.",
+                    "Trust",
+                ),
+            ]
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_historical_goal_environment(history: pd.DataFrame) -> None:
+    section_header("Historical Goal Environment")
+    recent_history = history[history["match_year"] >= 1992].copy()
+    history_summary = (
+        recent_history.groupby("match_year", as_index=False)
+        .agg(matches=("matches", "sum"), avg_total_goals=("avg_total_goals", "mean"))
+        .tail(35)
+    )
+    fig = px.line(
+        history_summary,
+        x="match_year",
+        y="avg_total_goals",
+        markers=True,
+        labels={"match_year": "Year", "avg_total_goals": "Average total goals"},
+    )
+    fig.update_traces(line_color=PALETTE["orange"])
+    fig = polish_figure(fig, 330)
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=PLOT_CONFIG,
+        key="overview_goal_environment",
+    )
+
+
 def render_executive_view(
     matches: pd.DataFrame,
     metrics: pd.DataFrame,
@@ -1342,9 +1445,12 @@ def render_overview(
     matches: pd.DataFrame,
     metrics: pd.DataFrame,
     teams: pd.DataFrame,
+    history: pd.DataFrame,
 ) -> None:
     render_executive_view(matches, metrics, teams)
     render_project_story()
+    render_dbt_usage_section()
+    render_historical_goal_environment(history)
 
 
 def team_line(team: str, goals: int, winner: str) -> str:
@@ -1906,6 +2012,20 @@ def render_model_evidence(
     render_metric_cards(metrics)
 
     section_header(
+        "Training Data and Signal Weighting",
+        "The model combines learned signals, calibrated blend settings, and a few deliberately capped rules. Learned model features do not have fixed dashboard weights; the training process estimates their influence from historical results.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(
+            method_card(title, body, badge)
+            for title, badge, body in TRAINING_SIGNAL_CARDS
+        )
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    section_header(
         "Model Architecture",
         "The final submission is a reconciled forecasting system rather than one model trying to solve every prediction target.",
     )
@@ -2024,63 +2144,6 @@ def render_model_evidence(
         },
     )
 
-    section_header(
-        "dbt Usage in the Project",
-        "dbt is the analytics engineering backbone. It turns raw soccer files into trustworthy feature tables and dashboard marts before Python ever trains a model.",
-    )
-    st.markdown(
-        '<div class="method-grid">'
-        + "".join(
-            [
-                method_card(
-                    "Staging models",
-                    "Clean raw fixtures, rankings, results, squads, and event files into predictable names, types, and source-aware fields.",
-                    "Clean",
-                ),
-                method_card(
-                    "Feature models",
-                    "Build features_historical_match_training and 2026 scoring rows with rolling form, point-in-time ranking joins, Elo, squad, and event signals.",
-                    "Model",
-                ),
-                method_card(
-                    "Marts and BI models",
-                    "Publish team profiles, fixture schedules, group standings, model context, and dashboard-ready tables at stable grains.",
-                    "Serve",
-                ),
-                method_card(
-                    "Tests and contracts",
-                    "Protect row counts, uniqueness, accepted values, playoff-team resolution, feature coverage, and leakage prevention.",
-                    "Trust",
-                ),
-            ]
-        )
-        + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    section_header("Historical Goal Environment")
-    recent_history = history[history["match_year"] >= 1992].copy()
-    history_summary = (
-        recent_history.groupby("match_year", as_index=False)
-        .agg(matches=("matches", "sum"), avg_total_goals=("avg_total_goals", "mean"))
-        .tail(35)
-    )
-    fig = px.line(
-        history_summary,
-        x="match_year",
-        y="avg_total_goals",
-        markers=True,
-        labels={"match_year": "Year", "avg_total_goals": "Average total goals"},
-    )
-    fig.update_traces(line_color=PALETTE["orange"])
-    fig = polish_figure(fig, 330)
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-        config=PLOT_CONFIG,
-        key="model_goal_environment",
-    )
-
 
 def main() -> None:
     data = load_data()
@@ -2105,7 +2168,7 @@ def main() -> None:
     )
 
     with tabs[0]:
-        render_overview(matches, metrics, teams)
+        render_overview(matches, metrics, teams, history)
     with tabs[1]:
         render_tournament_view(matches, standings, teams, context, selected_group, selected_team)
     with tabs[2]:

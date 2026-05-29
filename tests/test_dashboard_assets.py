@@ -140,7 +140,13 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "Overview" in source
     assert "Project Build" in source
     assert "Analytics Engineering Pipeline" in source
+    assert "dbt Usage in the Project" in source
+    assert "Historical Goal Environment" in source
     assert "features_historical_match_training" in source
+    assert "Training Data and Signal Weighting" in source
+    assert "Learned model features do not have fixed dashboard weights" in source
+    assert "Player-quality aggregates" in source
+    assert "Capped overlay" in source
     assert "Target Rationale" in source
 
 
