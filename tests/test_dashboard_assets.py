@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 
 import pandas as pd
@@ -21,6 +22,18 @@ def _read_dashboard_csv(file_name: str) -> pd.DataFrame:
     path = APP_DATA_DIR / file_name
     assert path.exists(), f"Missing dashboard snapshot file: {path}"
     return pd.read_csv(path)
+
+
+def _load_streamlit_app_module():
+    spec = importlib.util.spec_from_file_location(
+        "world_cup_streamlit_app",
+        Path("app/streamlit_app.py"),
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_dashboard_snapshot_files_are_present() -> None:
@@ -118,6 +131,7 @@ def test_streamlit_table_helper_omits_none_height() -> None:
 
     assert "st.dataframe(table, use_container_width=True, hide_index=True, height=height)" not in source
     assert 'if height is not None:' in source
+    assert "display_columns = available_columns(frame, columns)" in source
 
 
 def test_dashboard_includes_portfolio_case_study_story() -> None:
@@ -138,3 +152,30 @@ def test_team_profile_table_explains_model_columns() -> None:
     assert "Latest FIFA ranking points" in source
     assert "Average points above or below Elo expectation" in source
     assert "Coverage is a data-completeness check" in source
+
+
+def test_team_profile_enrichment_supports_older_dashboard_exports() -> None:
+    streamlit_app = _load_streamlit_app_module()
+    stale_export = pd.DataFrame(
+        {
+            "team_name": ["Example FC"],
+            "fifa_points": [None],
+        }
+    )
+
+    enriched = streamlit_app.add_strength_index(stale_export)
+
+    required_columns = {
+        "confederation",
+        "current_elo",
+        "last_10_adjusted_points_per_match",
+        "last_10_adjusted_goal_diff_per_match",
+        "overall_star_power_z",
+        "attacking_star_power_z",
+        "dashboard_strength_index",
+        "profile_completeness_score",
+    }
+    assert required_columns.issubset(enriched.columns)
+    assert enriched.loc[0, "confederation"] == "Unknown"
+    assert enriched.loc[0, "current_elo"] == 1500.0
+    assert enriched.loc[0, "dashboard_strength_index"] == 50.0

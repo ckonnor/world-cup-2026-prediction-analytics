@@ -711,14 +711,32 @@ def normalize_series(series: pd.Series) -> pd.Series:
 
 def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
     enriched = teams.copy()
-    if "confederation" not in enriched.columns:
-        enriched["confederation"] = "Unknown"
-    if "current_elo" not in enriched.columns:
-        enriched["current_elo"] = 1500.0
-    if "last_10_adjusted_points_per_match" not in enriched.columns:
-        enriched["last_10_adjusted_points_per_match"] = 0.0
-    if "last_10_adjusted_goal_diff_per_match" not in enriched.columns:
-        enriched["last_10_adjusted_goal_diff_per_match"] = 0.0
+    text_defaults = {
+        "confederation": "Unknown",
+        "group_letter": "",
+        "squad_status": "unknown",
+    }
+    numeric_defaults = {
+        "fifa_points": 1500.0,
+        "fifa_rank": 999.0,
+        "current_elo": 1500.0,
+        "last_10_adjusted_points_per_match": 0.0,
+        "last_10_adjusted_goal_diff_per_match": 0.0,
+        "overall_star_power_z": 0.0,
+        "attacking_star_power_z": 0.0,
+        "avg_corners_for": 0.0,
+        "blended_yellow_cards_for": 0.0,
+        "profile_completeness_score": 0.0,
+    }
+    for column, default in text_defaults.items():
+        if column not in enriched.columns:
+            enriched[column] = default
+        enriched[column] = enriched[column].fillna(default).astype(str)
+    for column, default in numeric_defaults.items():
+        if column not in enriched.columns:
+            enriched[column] = default
+        enriched[column] = pd.to_numeric(enriched[column], errors="coerce").fillna(default)
+    enriched["current_elo"] = enriched["current_elo"].clip(lower=1.0)
     fifa_points_score = normalize_series(enriched["fifa_points"])
     rank_score = 100 - normalize_series(enriched["fifa_rank"])
     elo_score = normalize_series(enriched["current_elo"])
@@ -862,7 +880,11 @@ def display_table(
     height: int | None = None,
     column_help: dict[str, str] | None = None,
 ) -> None:
-    table = frame.loc[:, columns].rename(columns=labels).copy()
+    display_columns = available_columns(frame, columns)
+    if not display_columns:
+        st.info("No display columns are available for this table.")
+        return
+    table = frame.loc[:, display_columns].rename(columns=labels).copy()
     for column in table.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]).columns:
         table[column] = table[column].dt.strftime("%b %d, %Y")
     for column in table.select_dtypes(include=["float"]).columns:
@@ -878,6 +900,7 @@ def display_table(
         dataframe_args["column_config"] = {
             labels.get(column, column): st.column_config.Column(help=help_text)
             for column, help_text in column_help.items()
+            if column in display_columns
         }
     st.dataframe(table, **dataframe_args)
 
