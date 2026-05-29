@@ -1699,14 +1699,14 @@ def render_team_lens(
         },
         460,
         {
-            "current_elo": "Current team Elo after historical international results. Elo adjusts for opponent strength and match result surprise.",
-            "fifa_points": "Latest FIFA ranking points. Higher values indicate stronger recent official FIFA performance.",
-            "last_10_adjusted_points_per_match": "Average points above or below Elo expectation across the team's ten most recent international matches.",
-            "last_10_adjusted_goal_diff_per_match": "Average goal difference above or below an Elo-implied expectation across the team's ten most recent international matches.",
-            "overall_star_power_z": "International pedigree z-score from squad caps, goals, top-five caps, and top-five goals. Positive values are above field average.",
-            "attacking_star_power_z": "Attacking squad-strength z-score, weighted toward goals and top attacking contributors.",
-            "dashboard_strength_index": "Dashboard composite index combining FIFA points, FIFA rank, recent form, and international pedigree.",
-            "profile_coverage_pct": "Share of the five expected team-profile inputs present: form, FIFA ranking, squad, event profile, and external player profile.",
+            "current_elo": "How strong the team has performed over time after accounting for opponent strength and match result surprise. Higher Elo means the team has consistently beaten strong opposition or avoided bad results.",
+            "fifa_points": "Official FIFA ranking points from the latest ranking snapshot. This is FIFA's own view of recent national-team performance.",
+            "last_10_adjusted_points_per_match": "How much better or worse the team performed than expected in its last 10 matches. Beating strong teams earns more credit than beating weak teams.",
+            "last_10_adjusted_goal_diff_per_match": "Goal difference above or below Elo expectation over the last 10 matches. This asks whether recent scorelines were better than the opponent quality suggested.",
+            "overall_star_power_z": "How battle-tested this squad is at senior international level. Built from squad caps, goals, top-five caps, and top-five goals; positive values are above the field average.",
+            "attacking_star_power_z": "How much proven international attacking production is in the squad. Midfielder/forward goals and top scorer concentration push this higher.",
+            "dashboard_strength_index": "A dashboard-only composite view of team strength. It blends FIFA points, FIFA rank, Elo, adjusted form, and international pedigree into one scan-friendly score.",
+            "profile_coverage_pct": "How complete the team profile is across the five expected inputs: form, FIFA ranking, squad, event profile, and external player profile. It is a data-quality check, not a performance score.",
         },
     )
     st.caption(

@@ -170,10 +170,11 @@ def test_team_profile_table_explains_model_columns() -> None:
     assert "st.column_config.Column(help=help_text)" in source
     assert "available_columns(" in source
     assert "Intl Pedigree" in source
-    assert "Current team Elo after historical international results" in source
-    assert "Latest FIFA ranking points" in source
-    assert "Average points above or below Elo expectation" in source
-    assert "International pedigree z-score" in source
+    assert "How strong the team has performed over time" in source
+    assert "Official FIFA ranking points" in source
+    assert "How much better or worse the team performed than expected" in source
+    assert "How battle-tested this squad is at senior international level" in source
+    assert "A dashboard-only composite view of team strength" in source
     assert "Coverage is a data-completeness check" in source
 
 
