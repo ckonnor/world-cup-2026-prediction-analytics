@@ -30,7 +30,7 @@ The hosted dashboard reads CSV snapshots from `app/data/`. These are treated as 
 | `dashboard_model_metrics.csv` | One row per model metric | Five tracked metrics with target, guardrail, stretch, and status. |
 | `dashboard_data_quality.csv` | One row per validation check | Submission validity and row-count checks for group, knockout, and combined predictions. |
 | `dashboard_historical_competition_summary.csv` | One row per historical tournament-year | Training-data context for scoring environment and coverage. |
-| `dashboard_tournament_simulation.csv` | One row per World Cup team | 48 teams, one row per team, advancement probabilities between 0 and 1, and title probabilities summing to 1. |
+| `dashboard_tournament_simulation.csv` | One row per World Cup team | 48 teams, one row per team, advancement probabilities between 0 and 1, title probabilities summing to 1, and a 0-100 route difficulty index. |
 
 ## dbt Model Contracts
 

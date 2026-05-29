@@ -846,6 +846,32 @@ def load_data() -> dict[str, pd.DataFrame]:
     data["matches"]["date_utc"] = pd.to_datetime(data["matches"]["date_utc"], utc=True)
     data["context"]["match_date_utc"] = pd.to_datetime(data["context"]["match_date_utc"], utc=True)
     data["teams"] = add_strength_index(data["teams"])
+    simulation_columns = [
+        "team_name",
+        "champion_probability",
+        "final_probability",
+        "semi_final_probability",
+        "route_difficulty_index",
+        "title_route_samples",
+    ]
+    data["teams"] = data["teams"].merge(
+        data["simulation"][available_columns(data["simulation"], simulation_columns)],
+        on="team_name",
+        how="left",
+    )
+    for column, default in {
+        "champion_probability": 0.0,
+        "final_probability": 0.0,
+        "semi_final_probability": 0.0,
+        "route_difficulty_index": 50.0,
+        "title_route_samples": 0,
+    }.items():
+        if column not in data["teams"].columns:
+            data["teams"][column] = default
+        data["teams"][column] = pd.to_numeric(
+            data["teams"][column],
+            errors="coerce",
+        ).fillna(default)
     return data
 
 
@@ -1953,24 +1979,36 @@ def render_team_lens(
     if selected_team == "All teams":
         section_header(
             "Team Comparison",
-            "The field view compares ranking, Elo, opponent-adjusted form, international pedigree, and the dashboard composite strength index.",
+            "The field view compares each team's composite strength with its simulated route difficulty. Higher route difficulty means the team's title-winning paths usually run through stronger knockout opponents.",
         )
+        field = teams.copy()
+        field["champion_probability_pct"] = field["champion_probability"] * 100
+        field["final_probability_pct"] = field["final_probability"] * 100
         chart_cols = st.columns([1.05, 0.95])
         with chart_cols[0]:
             fig = px.scatter(
-                teams,
-                x="fifa_points",
-                y="overall_star_power_z",
+                field,
+                x="route_difficulty_index",
+                y="dashboard_strength_index",
                 color="confederation",
-                size="current_elo",
+                size="champion_probability_pct",
                 hover_name="team_name",
                 labels={
-                    "fifa_points": "FIFA points",
-                    "overall_star_power_z": "Intl pedigree",
+                    "route_difficulty_index": "Difficulty of Schedule",
+                    "dashboard_strength_index": "Strength",
                     "confederation": "Confederation",
-                    "current_elo": "Elo",
+                    "champion_probability_pct": "Title probability (%)",
+                },
+                hover_data={
+                    "route_difficulty_index": ":.1f",
+                    "dashboard_strength_index": ":.1f",
+                    "champion_probability_pct": ":.1f",
+                    "final_probability_pct": ":.1f",
+                    "current_elo": ":.0f",
+                    "confederation": False,
                 },
                 color_discrete_sequence=px.colors.qualitative.Set2,
+                size_max=24,
             )
             fig = polish_figure(fig, 430)
             st.plotly_chart(
@@ -1981,16 +2019,18 @@ def render_team_lens(
             )
 
         with chart_cols[1]:
+            field_table = field.nlargest(14, "dashboard_strength_index")
             display_table(
-                teams.nlargest(14, "dashboard_strength_index"),
+                field_table,
                 [
                     "team_name",
                     "group_letter",
                     "fifa_rank",
                     "current_elo",
                     "dashboard_strength_index",
+                    "route_difficulty_index",
+                    "champion_probability_pct",
                     "last_10_adjusted_points_per_match",
-                    "overall_star_power_z",
                 ],
                 {
                     "team_name": "Team",
@@ -1998,8 +2038,9 @@ def render_team_lens(
                     "fifa_rank": "Rank",
                     "current_elo": "Elo",
                     "dashboard_strength_index": "Strength",
+                    "route_difficulty_index": "Route Difficulty",
+                    "champion_probability_pct": "Title %",
                     "last_10_adjusted_points_per_match": "Adj Form",
-                    "overall_star_power_z": "Intl Pedigree",
                 },
                 430,
             )
@@ -2009,7 +2050,7 @@ def render_team_lens(
             f"{selected_team} Team Focus",
             "Percentile scores compare the selected team with the rest of the tournament field.",
         )
-        cards = st.columns(5)
+        cards = st.columns(6)
         with cards[0]:
             profile_card("Group", profile["group_letter"], "Opening path")
         with cards[1]:
@@ -2023,6 +2064,12 @@ def render_team_lens(
         with cards[3]:
             profile_card("Strength", f"{profile['dashboard_strength_index']:.1f}", "Composite index")
         with cards[4]:
+            profile_card(
+                "Route difficulty",
+                f"{profile['route_difficulty_index']:.1f}",
+                "Simulated title path",
+            )
+        with cards[5]:
             profile_card(
                 "Data coverage",
                 f"{profile['profile_completeness_score']:.0%}",
@@ -2079,6 +2126,7 @@ def render_team_lens(
             "attacking_star_power_z",
             "avg_corners_for",
             "blended_yellow_cards_for",
+            "route_difficulty_index",
             "dashboard_strength_index",
             "profile_coverage_pct",
         ],
@@ -2094,6 +2142,7 @@ def render_team_lens(
             "attacking_star_power_z": "Attack",
             "avg_corners_for": "Corners For",
             "blended_yellow_cards_for": "Yellows",
+            "route_difficulty_index": "Route Difficulty",
             "dashboard_strength_index": "Strength",
             "profile_coverage_pct": "Coverage",
         },
@@ -2105,6 +2154,7 @@ def render_team_lens(
             "last_10_adjusted_goal_diff_per_match": "Goal difference above or below Elo expectation over the last 10 matches. This asks whether recent scorelines were better than the opponent quality suggested.",
             "overall_star_power_z": "How battle-tested this squad is at senior international level. Built from squad caps, goals, top-five caps, and top-five goals; positive values are above the field average.",
             "attacking_star_power_z": "How much proven international attacking production is in the squad. Midfielder/forward goals and top scorer concentration push this higher.",
+            "route_difficulty_index": "How difficult the team's simulated title path is. It is based on the average strength of knockout opponents faced in championship-winning simulations, scaled from 0 to 100.",
             "dashboard_strength_index": "A dashboard-only composite view of team strength. It blends FIFA points, FIFA rank, Elo, adjusted form, and international pedigree into one scan-friendly score.",
             "profile_coverage_pct": "How complete the team profile is across the five expected inputs: form, FIFA ranking, squad, event profile, and external player profile. It is a data-quality check, not a performance score.",
         },

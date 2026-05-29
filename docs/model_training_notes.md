@@ -69,6 +69,8 @@ Group standings use standard points, goal difference, and goals-for ordering. If
 
 The deterministic bracket remains the submission artifact, but the pipeline also runs repeated full-tournament simulations. Each run samples group-stage scorelines from the calibrated scoreline probability grid, rebuilds the group table, resolves the dynamic knockout bracket, samples knockout scorelines, and resolves tied knockout matches as penalties. This does not change validation accuracy by itself; it quantifies uncertainty around the single submitted path.
 
+The simulation layer also produces a route difficulty metric. For each team, Python tracks the strength of knockout opponents faced on championship-winning simulation paths, then scales that average opponent strength from 0 to 100 across the field. Higher values mean a harder projected title route.
+
 Corners and cards now come from a separate event profile rather than fixed constants:
 
 - Corners use weighted team-level FootyStats event rates from World Cup qualifiers and recent World Cups.

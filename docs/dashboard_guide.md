@@ -39,7 +39,7 @@ data/bi_exports/
 | `dashboard_model_metrics.csv` | One row per model metric | Guardrail, target, stretch, and current model performance |
 | `dashboard_data_quality.csv` | One row per validation check | Submission row counts and prediction distribution checks |
 | `dashboard_historical_competition_summary.csv` | One row per year/tournament | Training-data coverage and historical scoring environment |
-| `dashboard_tournament_simulation.csv` | One row per team | Advancement and title probabilities from repeated full-tournament simulations |
+| `dashboard_tournament_simulation.csv` | One row per team | Advancement, title probability, and route difficulty from repeated full-tournament simulations |
 
 ## Streamlit Path
 
@@ -83,7 +83,7 @@ The current Streamlit dashboard is organized into four stakeholder-facing pages.
 | --- | --- | --- |
 | Overview | Lead with the deterministic forecast, validation metrics, championship probabilities, project story, dbt usage, and scoring environment. | `dashboard_match_predictions.csv`, `dashboard_model_metrics.csv`, `dashboard_team_profiles.csv`, `dashboard_tournament_simulation.csv`, `dashboard_historical_competition_summary.csv` |
 | Tournament | Show the deterministic bracket, group standings, fixtures, match cards, and feature context. | `dashboard_match_predictions.csv`, `dashboard_group_standings.csv`, `dashboard_match_feature_context.csv` |
-| Teams | Compare the field or inspect one selected team across strength signals and predicted path. | `dashboard_team_profiles.csv`, `dashboard_match_predictions.csv` |
+| Teams | Compare the field or inspect one selected team across strength signals, route difficulty, and predicted path. | `dashboard_team_profiles.csv`, `dashboard_tournament_simulation.csv`, `dashboard_match_predictions.csv` |
 | Methodology | Connect forecast outputs back to validation targets, modeling choices, data quality, and source links. | `dashboard_model_metrics.csv`, `dashboard_data_quality.csv`, `dashboard_historical_competition_summary.csv` |
 
 ## Portfolio Framing

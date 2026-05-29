@@ -141,12 +141,19 @@ def test_dashboard_tournament_simulation_contract() -> None:
         "semi_final_probability",
         "final_probability",
         "champion_probability",
+        "title_route_samples",
+        "avg_title_route_opponent_strength",
+        "avg_knockout_opponent_strength",
+        "route_difficulty_raw",
+        "route_difficulty_index",
     }
     assert required_columns.issubset(simulation.columns)
     assert len(simulation) == 48
     assert simulation["team_name"].is_unique
     assert simulation["champion_probability"].between(0, 1).all()
     assert simulation["round_of_32_probability"].between(0, 1).all()
+    assert simulation["route_difficulty_index"].between(0, 100).all()
+    assert simulation["route_difficulty_index"].notna().all()
     assert abs(simulation["champion_probability"].sum() - 1.0) < 0.001
 
 
@@ -170,6 +177,7 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "Training Data and Signal Weighting" in source
     assert "Championship Probability Layer" in source
     assert "Repeated simulations estimate title probabilities" in source
+    assert "Difficulty of Schedule" in source
     assert "Learned model features do not have fixed dashboard weights" in source
     assert "Player-quality aggregates" in source
     assert "Capped overlay" in source

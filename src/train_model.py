@@ -2408,6 +2408,10 @@ def simulate_tournament_probabilities(
     )
     round_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     group_points_total: dict[str, float] = defaultdict(float)
+    knockout_opponent_strength_total: dict[str, float] = defaultdict(float)
+    knockout_opponent_match_total: dict[str, int] = defaultdict(int)
+    title_route_opponent_strength_total: dict[str, float] = defaultdict(float)
+    title_route_opponent_match_total: dict[str, int] = defaultdict(int)
     distribution_cache: dict[tuple[str, str], tuple[pd.DataFrame, float]] = {}
 
     for _ in range(simulation_runs):
@@ -2439,6 +2443,7 @@ def simulate_tournament_probabilities(
 
         match_results: dict[int, dict[str, str]] = {}
         used_third_groups: set[str] = set()
+        route_opponents: dict[str, list[float]] = defaultdict(list)
         for slot_row in sorted_slots.drop(columns="_match_id_sort").itertuples(index=False):
             row_data = slot_row._asdict()
             match_id = int(row_data["match_id"])
@@ -2457,6 +2462,14 @@ def simulate_tournament_probabilities(
             )
             _increment_reached_round(round_counts, predicted_home_team, round_name)
             _increment_reached_round(round_counts, predicted_away_team, round_name)
+            home_opponent_strength = group_tiebreak_strengths[predicted_away_team]
+            away_opponent_strength = group_tiebreak_strengths[predicted_home_team]
+            knockout_opponent_strength_total[predicted_home_team] += home_opponent_strength
+            knockout_opponent_strength_total[predicted_away_team] += away_opponent_strength
+            knockout_opponent_match_total[predicted_home_team] += 1
+            knockout_opponent_match_total[predicted_away_team] += 1
+            route_opponents[predicted_home_team].append(home_opponent_strength)
+            route_opponents[predicted_away_team].append(away_opponent_strength)
 
             result = _sample_knockout_result(
                 predicted_home_team,
@@ -2474,11 +2487,26 @@ def simulate_tournament_probabilities(
                 "loser_team": str(result["loser_team"]),
             }
             if round_name == "Final":
-                round_counts[str(result["winner_team"])]["champion_count"] += 1
+                champion = str(result["winner_team"])
+                round_counts[champion]["champion_count"] += 1
+                title_route_opponent_strength_total[champion] += sum(route_opponents[champion])
+                title_route_opponent_match_total[champion] += len(route_opponents[champion])
 
     rows = []
     for team_name in teams:
         counts = round_counts[team_name]
+        title_route_matches = title_route_opponent_match_total[team_name]
+        knockout_route_matches = knockout_opponent_match_total[team_name]
+        title_route_difficulty = (
+            title_route_opponent_strength_total[team_name] / title_route_matches
+            if title_route_matches
+            else np.nan
+        )
+        knockout_route_difficulty = (
+            knockout_opponent_strength_total[team_name] / knockout_route_matches
+            if knockout_route_matches
+            else np.nan
+        )
         rows.append(
             {
                 "team_name": team_name,
@@ -2494,11 +2522,39 @@ def simulate_tournament_probabilities(
                 "semi_final_probability": counts["semi_final_count"] / simulation_runs,
                 "final_probability": counts["final_count"] / simulation_runs,
                 "champion_probability": counts["champion_count"] / simulation_runs,
+                "title_route_samples": counts["champion_count"],
+                "avg_title_route_opponent_strength": title_route_difficulty,
+                "avg_knockout_opponent_strength": knockout_route_difficulty,
             }
         )
 
+    simulation = pd.DataFrame(rows)
+    simulation["route_difficulty_raw"] = simulation[
+        "avg_title_route_opponent_strength"
+    ].fillna(simulation["avg_knockout_opponent_strength"])
+    fallback_route_difficulty = simulation["route_difficulty_raw"].median()
+    simulation["route_difficulty_raw"] = simulation["route_difficulty_raw"].fillna(
+        0.0 if pd.isna(fallback_route_difficulty) else fallback_route_difficulty
+    )
+    route_minimum = simulation["route_difficulty_raw"].min()
+    route_maximum = simulation["route_difficulty_raw"].max()
+    if pd.isna(route_minimum) or route_minimum == route_maximum:
+        simulation["route_difficulty_index"] = 50.0
+    else:
+        simulation["route_difficulty_index"] = (
+            (simulation["route_difficulty_raw"] - route_minimum)
+            / (route_maximum - route_minimum)
+            * 100
+        )
     return (
-        pd.DataFrame(rows)
+        simulation.round(
+            {
+                "avg_title_route_opponent_strength": 3,
+                "avg_knockout_opponent_strength": 3,
+                "route_difficulty_raw": 3,
+                "route_difficulty_index": 1,
+            }
+        )
         .sort_values(
             ["champion_probability", "final_probability", "semi_final_probability", "team_name"],
             ascending=[False, False, False, True],
@@ -2604,8 +2660,8 @@ def main() -> None:
         "method": (
             "Repeated tournament simulation samples group-stage scorelines and dynamic "
             "knockout matchups from the calibrated scoreline probability grid. This "
-            "estimates advancement and championship probabilities without changing the "
-            "single deterministic submission bracket."
+            "estimates advancement probabilities, championship probabilities, and route "
+            "difficulty without changing the single deterministic submission bracket."
         ),
         "championship_favorite": str(simulation_favorite["team_name"]),
         "championship_favorite_probability": float(
