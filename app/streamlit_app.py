@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 
@@ -24,14 +25,20 @@ ROUND_ORDER = [
     "Third-place playoff",
 ]
 PALETTE = {
-    "home": "#2563eb",
-    "away": "#f97316",
-    "draw": "#14b8a6",
-    "target": "#16a34a",
-    "guardrail": "#f59e0b",
-    "stretch": "#0f766e",
-    "below_guardrail": "#dc2626",
+    "ink": "#0f172a",
+    "muted": "#64748b",
+    "border": "#e2e8f0",
+    "blue": "#2563eb",
+    "teal": "#0f766e",
+    "cyan": "#14b8a6",
+    "orange": "#f97316",
+    "amber": "#f59e0b",
+    "rose": "#dc2626",
+    "surface": "#ffffff",
+    "subtle": "#f8fafc",
 }
+PLOT_CONFIG = {"displayModeBar": False}
+
 px.defaults.template = "plotly_white"
 
 
@@ -45,59 +52,240 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        .block-container {
-            padding-top: 1.35rem;
-            padding-bottom: 2.5rem;
+        :root {
+            --ink: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --surface: #ffffff;
+            --subtle: #f8fafc;
+            --blue: #2563eb;
+            --teal: #0f766e;
+            --cyan: #14b8a6;
+            --orange: #f97316;
+            --amber: #f59e0b;
+            --rose: #dc2626;
         }
-        .small-note {
-            color: #64748b;
-            font-size: 0.94rem;
-            margin-top: -0.35rem;
+        .block-container {
+            padding-top: 1.15rem;
+            padding-bottom: 2.5rem;
+            max-width: 1260px;
+        }
+        h1, h2, h3 {
+            letter-spacing: 0;
+        }
+        div[data-testid="stSidebar"] {
+            background: #ffffff;
+            border-right: 1px solid var(--border);
+        }
+        div[data-testid="stTabs"] button p {
+            font-size: 0.92rem;
+            font-weight: 560;
+        }
+        .app-header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+        .eyebrow {
+            color: var(--teal);
+            font-size: 0.78rem;
+            font-weight: 760;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1.25rem;
+            align-items: flex-end;
+        }
+        .app-title {
+            color: var(--ink);
+            font-size: 2.35rem;
+            font-weight: 760;
+            line-height: 1.05;
+            margin: 0;
+            max-width: 45rem;
+        }
+        .app-subtitle {
+            color: var(--muted);
+            font-size: 0.98rem;
+            line-height: 1.48;
+            margin: 0.7rem 0 0;
             max-width: 58rem;
         }
-        .section-note {
-            color: #64748b;
-            font-size: 0.95rem;
-            margin-bottom: 0.75rem;
+        .stack-pills {
+            display: flex;
+            gap: 0.4rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            min-width: 15rem;
         }
-        .metric-card, .story-card {
-            border: 1px solid #e5e7eb;
+        .pill {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: #334155;
+            background: var(--subtle);
+            font-size: 0.75rem;
+            font-weight: 660;
+            padding: 0.28rem 0.58rem;
+            white-space: nowrap;
+        }
+        .section-head {
+            margin: 1.25rem 0 0.75rem;
+        }
+        .section-title {
+            color: var(--ink);
+            font-size: 1.28rem;
+            font-weight: 730;
+            line-height: 1.2;
+            margin: 0;
+        }
+        .section-copy {
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.45;
+            margin: 0.35rem 0 0;
+            max-width: 62rem;
+        }
+        .metric-card, .insight-card, .leader-card, .profile-card, .prediction-card {
+            border: 1px solid var(--border);
             border-radius: 8px;
-            background: #ffffff;
-            padding: 0.9rem 1rem;
-            margin-bottom: 0.75rem;
+            background: var(--surface);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
         .metric-card {
-            min-height: 6.05rem;
+            min-height: 6.25rem;
+            padding: 0.85rem 0.95rem;
+            margin-bottom: 0.75rem;
         }
-        .metric-card-label {
+        .metric-label {
             color: #475569;
-            font-size: 0.88rem;
+            font-size: 0.78rem;
+            font-weight: 650;
             line-height: 1.2;
-            margin-bottom: 0.7rem;
+            margin-bottom: 0.55rem;
+            text-transform: uppercase;
         }
-        .metric-card-value {
-            color: #0f172a;
-            font-size: 1.7rem;
-            font-weight: 550;
+        .metric-value {
+            color: var(--ink);
+            font-size: 1.58rem;
+            font-weight: 740;
             line-height: 1.1;
             overflow-wrap: anywhere;
         }
-        .story-card-title {
-            color: #0f172a;
+        .metric-detail {
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.25;
+            margin-top: 0.45rem;
+        }
+        .leader-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            min-height: 14.1rem;
+            padding: 1rem 1.1rem;
+            margin-bottom: 0.75rem;
+        }
+        .leader-label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 660;
+            margin-bottom: 0.45rem;
+            text-transform: uppercase;
+        }
+        .leader-title {
+            color: var(--ink);
+            font-size: 2.05rem;
+            font-weight: 790;
+            line-height: 1.05;
+            margin-bottom: 0.7rem;
+        }
+        .leader-detail {
+            color: #334155;
+            font-size: 0.96rem;
+            line-height: 1.45;
+            margin-bottom: 0.8rem;
+        }
+        .leader-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+        }
+        .leader-mini {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.55rem;
+        }
+        .leader-mini-label {
+            color: var(--muted);
+            font-size: 0.7rem;
+            margin-bottom: 0.2rem;
+            text-transform: uppercase;
+        }
+        .leader-mini-value {
+            color: var(--ink);
+            font-size: 0.94rem;
+            font-weight: 720;
+            overflow-wrap: anywhere;
+        }
+        .insight-card {
+            min-height: 7.6rem;
+            padding: 0.9rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .insight-kicker {
+            color: var(--teal);
+            font-size: 0.75rem;
+            font-weight: 760;
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+        }
+        .insight-title {
+            color: var(--ink);
             font-size: 1rem;
-            font-weight: 650;
+            font-weight: 730;
+            line-height: 1.25;
             margin-bottom: 0.35rem;
         }
-        .story-card-body {
+        .insight-body {
             color: #475569;
-            font-size: 0.95rem;
-            line-height: 1.45;
+            font-size: 0.9rem;
+            line-height: 1.42;
+        }
+        .status-badge {
+            border-radius: 999px;
+            display: inline-flex;
+            font-size: 0.72rem;
+            font-weight: 760;
+            padding: 0.25rem 0.52rem;
+            text-transform: uppercase;
+        }
+        .status-target, .status-stretch {
+            color: #065f46;
+            background: #d1fae5;
+        }
+        .status-guardrail {
+            color: #92400e;
+            background: #fef3c7;
+        }
+        .status-below {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+        .bracket-shell {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.85rem;
+            overflow-x: auto;
         }
         .bracket-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(112px, 1fr));
-            gap: 0.55rem;
+            grid-template-columns: repeat(6, minmax(128px, 1fr));
+            gap: 0.6rem;
+            min-width: 760px;
             align-items: start;
         }
         .round-column {
@@ -105,49 +293,154 @@ st.markdown(
         }
         .round-title {
             color: #334155;
-            font-size: 0.9rem;
-            font-weight: 700;
+            font-size: 0.82rem;
+            font-weight: 760;
             margin-bottom: 0.5rem;
         }
         .match-card {
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border);
             border-radius: 8px;
             background: #ffffff;
             padding: 0.5rem;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.5rem;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
         .match-card.focus {
-            border: 2px solid #2563eb;
+            border: 2px solid var(--blue);
             background: #eff6ff;
         }
         .match-meta {
-            color: #64748b;
-            font-size: 0.72rem;
-            margin-bottom: 0.35rem;
+            color: var(--muted);
+            font-size: 0.69rem;
+            margin-bottom: 0.3rem;
         }
         .team-line {
             display: flex;
             justify-content: space-between;
-            gap: 0.5rem;
+            gap: 0.4rem;
             color: #334155;
-            font-size: 0.78rem;
-            line-height: 1.3;
+            font-size: 0.76rem;
+            line-height: 1.28;
             margin: 0.12rem 0;
         }
         .team-line.winner {
-            color: #0f172a;
-            font-weight: 750;
+            color: var(--ink);
+            font-weight: 760;
         }
         .winner-note {
-            color: #0f766e;
-            font-size: 0.7rem;
-            font-weight: 650;
+            color: var(--teal);
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-top: 0.34rem;
+        }
+        .profile-card {
+            padding: 0.85rem 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+        .profile-label {
+            color: var(--muted);
+            font-size: 0.75rem;
+            font-weight: 680;
+            text-transform: uppercase;
+        }
+        .profile-value {
+            color: var(--ink);
+            font-size: 1.35rem;
+            font-weight: 760;
+            line-height: 1.12;
             margin-top: 0.35rem;
         }
-        @media (max-width: 1100px) {
-            .bracket-grid {
-                grid-template-columns: repeat(2, minmax(150px, 1fr));
+        .profile-detail {
+            color: #475569;
+            font-size: 0.82rem;
+            margin-top: 0.35rem;
+        }
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.7rem;
+            margin-bottom: 1rem;
+        }
+        .prediction-card {
+            padding: 0.75rem 0.85rem;
+            min-height: 8.5rem;
+        }
+        .prediction-card.focus {
+            border: 2px solid var(--blue);
+            background: #eff6ff;
+        }
+        .prediction-meta {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 650;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+        .prediction-main {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .prediction-team {
+            color: var(--ink);
+            font-size: 0.94rem;
+            font-weight: 720;
+            line-height: 1.2;
+            max-width: 5.8rem;
+        }
+        .prediction-score {
+            color: var(--ink);
+            font-size: 1.55rem;
+            font-weight: 780;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .prediction-detail {
+            color: #475569;
+            font-size: 0.8rem;
+            line-height: 1.35;
+            margin-top: 0.55rem;
+        }
+        .sidebar-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--subtle);
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+        }
+        .sidebar-kicker {
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 720;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+        .sidebar-title {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 760;
+            line-height: 1.15;
+            margin-bottom: 0.45rem;
+        }
+        .sidebar-row {
+            color: #475569;
+            display: flex;
+            font-size: 0.8rem;
+            justify-content: space-between;
+            padding: 0.12rem 0;
+        }
+        @media (max-width: 1000px) {
+            .title-row {
+                display: block;
+            }
+            .stack-pills {
+                justify-content: flex-start;
+                margin-top: 0.75rem;
+            }
+            .leader-strip, .prediction-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -167,13 +460,54 @@ def load_data() -> dict[str, pd.DataFrame]:
         "quality": pd.read_csv(DATA_DIR / "dashboard_data_quality.csv"),
         "history": pd.read_csv(DATA_DIR / "dashboard_historical_competition_summary.csv"),
     }
-    data["matches"]["date_utc"] = pd.to_datetime(data["matches"]["date_utc"])
-    data["context"]["match_date_utc"] = pd.to_datetime(data["context"]["match_date_utc"])
+    data["matches"]["date_utc"] = pd.to_datetime(data["matches"]["date_utc"], utc=True)
+    data["context"]["match_date_utc"] = pd.to_datetime(data["context"]["match_date_utc"], utc=True)
+    data["teams"] = add_strength_index(data["teams"])
     return data
+
+
+def safe(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    return html.escape(str(value))
 
 
 def pct(value: float) -> str:
     return f"{value:.1%}"
+
+
+def signed(value: float, digits: int = 2) -> str:
+    return f"{value:+.{digits}f}"
+
+
+def title_label(value: object) -> str:
+    if pd.isna(value):
+        return ""
+    return str(value).replace("_", " ").title()
+
+
+def normalize_series(series: pd.Series) -> pd.Series:
+    clean = pd.to_numeric(series, errors="coerce")
+    minimum = clean.min()
+    maximum = clean.max()
+    if pd.isna(minimum) or pd.isna(maximum) or minimum == maximum:
+        return pd.Series(50.0, index=series.index)
+    return ((clean - minimum) / (maximum - minimum) * 100).fillna(50.0)
+
+
+def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
+    enriched = teams.copy()
+    fifa_points_score = normalize_series(enriched["fifa_points"])
+    rank_score = 100 - normalize_series(enriched["fifa_rank"])
+    star_score = normalize_series(enriched["overall_star_power_z"])
+    form_score = normalize_series(enriched["last_10_points_per_match"])
+    enriched["dashboard_strength_index"] = (
+        0.34 * fifa_points_score
+        + 0.26 * rank_score
+        + 0.24 * star_score
+        + 0.16 * form_score
+    ).round(1)
+    return enriched
 
 
 def metric_value(metrics: pd.DataFrame, metric_name: str) -> float:
@@ -183,40 +517,116 @@ def metric_value(metrics: pd.DataFrame, metric_name: str) -> float:
     return float(row.iloc[0]["current_value"])
 
 
-def metric_card(label: str, value: object) -> None:
+def metric_row(metrics: pd.DataFrame, metric_name: str) -> pd.Series:
+    row = metrics.loc[metrics["metric_name"] == metric_name]
+    if row.empty:
+        raise ValueError(f"Missing metric: {metric_name}")
+    return row.iloc[0]
+
+
+def metric_display(row: pd.Series) -> str:
+    value = float(row["current_value"])
+    if row["direction"] == "higher":
+        return pct(value)
+    return f"{value:.3f}"
+
+
+def status_class(status: str) -> str:
+    normalized = status.lower().replace("_", "-").replace(" ", "-")
+    if normalized.startswith("below"):
+        return "status-below"
+    return f"status-{normalized}"
+
+
+def metric_card(label: str, value: object, detail: str | None = None) -> None:
+    detail_html = f'<div class="metric-detail">{safe(detail)}</div>' if detail else ""
     st.markdown(
-        f"""
-        <div class="metric-card">
-            <div class="metric-card-label">{html.escape(str(label))}</div>
-            <div class="metric-card-value">{html.escape(str(value))}</div>
-        </div>
-        """,
+        "\n".join(
+            [
+                '<div class="metric-card">',
+                f'<div class="metric-label">{safe(label)}</div>',
+                f'<div class="metric-value">{safe(value)}</div>',
+                detail_html,
+                "</div>",
+            ]
+        ),
         unsafe_allow_html=True,
     )
 
 
-def story_card(title: str, body: str) -> None:
+def insight_card(kicker: str, title: str, body: str) -> None:
     st.markdown(
-        f"""
-        <div class="story-card">
-            <div class="story-card-title">{html.escape(title)}</div>
-            <div class="story-card-body">{html.escape(body)}</div>
-        </div>
-        """,
+        "\n".join(
+            [
+                '<div class="insight-card">',
+                f'<div class="insight-kicker">{safe(kicker)}</div>',
+                f'<div class="insight-title">{safe(title)}</div>',
+                f'<div class="insight-body">{safe(body)}</div>',
+                "</div>",
+            ]
+        ),
         unsafe_allow_html=True,
     )
 
 
-def section_note(text: str) -> None:
+def section_header(title: str, copy: str | None = None) -> None:
+    copy_html = f'<p class="section-copy">{safe(copy)}</p>' if copy else ""
     st.markdown(
-        f'<p class="section-note">{html.escape(text)}</p>',
+        "\n".join(
+            [
+                '<div class="section-head">',
+                f'<h2 class="section-title">{safe(title)}</h2>',
+                copy_html,
+                "</div>",
+            ]
+        ),
         unsafe_allow_html=True,
     )
 
 
-def display_table(frame: pd.DataFrame, columns: list[str], labels: dict[str, str]) -> None:
-    table = frame[columns].rename(columns=labels)
-    st.dataframe(table, use_container_width=True, hide_index=True)
+def profile_card(label: str, value: object, detail: str | None = None) -> None:
+    detail_html = f'<div class="profile-detail">{safe(detail)}</div>' if detail else ""
+    st.markdown(
+        "\n".join(
+            [
+                '<div class="profile-card">',
+                f'<div class="profile-label">{safe(label)}</div>',
+                f'<div class="profile-value">{safe(value)}</div>',
+                detail_html,
+                "</div>",
+            ]
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def display_table(
+    frame: pd.DataFrame,
+    columns: list[str],
+    labels: dict[str, str],
+    height: int | None = None,
+) -> None:
+    table = frame.loc[:, columns].rename(columns=labels).copy()
+    for column in table.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]).columns:
+        table[column] = table[column].dt.strftime("%b %d, %Y")
+    for column in table.select_dtypes(include=["float"]).columns:
+        table[column] = table[column].round(3)
+    table = table.where(pd.notna(table), "")
+    st.dataframe(table, use_container_width=True, hide_index=True, height=height)
+
+
+def polish_figure(fig: go.Figure, height: int = 360) -> go.Figure:
+    fig.update_layout(
+        height=height,
+        margin=dict(l=10, r=10, t=24, b=10),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(color=PALETTE["ink"], size=12),
+        legend_title_text="",
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False)
+    fig.update_yaxes(gridcolor="#e5e7eb", zeroline=False)
+    return fig
 
 
 def team_group(teams: pd.DataFrame, team: str) -> str | None:
@@ -265,15 +675,12 @@ def runner_up_from_final(final_row: pd.Series) -> str:
     return away_team if final_row["predicted_winner_team"] == home_team else home_team
 
 
-def outcome_distribution(matches: pd.DataFrame) -> pd.DataFrame:
-    result = (
-        matches.groupby(["competition_phase", "winner_label"], dropna=False)
-        .size()
-        .reset_index(name="matches")
-    )
-    result["winner_label"] = result["winner_label"].str.title()
-    result["phase_label"] = result["competition_phase"].map(PHASE_LABELS)
-    return result
+def final_description(final_row: pd.Series) -> str:
+    home_team, away_team = match_team_names(final_row)
+    winner = str(final_row["predicted_winner_team"])
+    loser = away_team if winner == home_team else home_team
+    penalties = " after penalties" if bool(final_row["penalties"]) else ""
+    return f"{winner} over {loser}, {final_row['scoreline']}{penalties}"
 
 
 def team_journey(matches: pd.DataFrame, team: str) -> pd.DataFrame:
@@ -297,18 +704,36 @@ def team_journey(matches: pd.DataFrame, team: str) -> pd.DataFrame:
         else:
             result = "Win" if row_dict["predicted_winner_team"] == team else "Loss"
             if row_dict["penalties"]:
-                result = f"{result} on pens"
+                result = f"{result} on penalties"
 
         rows.append(
             {
-                "Match": row_dict["match_id"],
+                "Match": int(row_dict["match_id"]),
                 "Stage": row_dict["round"],
                 "Opponent": opponent,
-                "Score": f"{goals_for}-{goals_against}",
+                "Score": f"{int(goals_for)}-{int(goals_against)}",
                 "Result": result,
             }
         )
     return pd.DataFrame(rows)
+
+
+def group_qualifiers(standings: pd.DataFrame) -> pd.DataFrame:
+    qualifiers = standings.loc[standings["group_rank"] <= 2].copy()
+    pivot = qualifiers.pivot(index="group_letter", columns="group_rank", values="team_name")
+    pivot = pivot.rename(columns={1: "Winner", 2: "Runner-up"}).reset_index()
+    return pivot.rename(columns={"group_letter": "Group"})
+
+
+def outcome_distribution(matches: pd.DataFrame) -> pd.DataFrame:
+    result = (
+        matches.groupby(["competition_phase", "winner_label"], dropna=False)
+        .size()
+        .reset_index(name="matches")
+    )
+    result["winner_label"] = result["winner_label"].str.title()
+    result["phase_label"] = result["competition_phase"].map(PHASE_LABELS)
+    return result
 
 
 def filtered_match_explorer(
@@ -328,100 +753,236 @@ def filtered_match_explorer(
     return filtered.sort_values("match_id")
 
 
+def percentile_score(series: pd.Series, value: float, higher_better: bool = True) -> float:
+    clean = pd.to_numeric(series, errors="coerce").dropna()
+    if clean.empty or pd.isna(value):
+        return 50.0
+    if higher_better:
+        return float((clean <= value).mean() * 100)
+    return float((clean >= value).mean() * 100)
+
+
+def team_signal_scores(teams: pd.DataFrame, team: str) -> pd.DataFrame:
+    row = teams.loc[teams["team_name"] == team].iloc[0]
+    signals = [
+        ("FIFA points", "fifa_points", True),
+        ("Recent form", "last_10_points_per_match", True),
+        ("Goal difference", "last_10_goal_diff_per_match", True),
+        ("Squad star power", "overall_star_power_z", True),
+        ("Attack profile", "attacking_star_power_z", True),
+    ]
+    return pd.DataFrame(
+        {
+            "Signal": label,
+            "Percentile": percentile_score(teams[column], row[column], higher_better),
+        }
+        for label, column, higher_better in signals
+    )
+
+
 def render_header() -> None:
-    st.title("FIFA World Cup 2026 Prediction Analytics")
     st.markdown(
-        '<p class="small-note">A portfolio dashboard for a dbt + Python forecasting project. It is meant to explain the model output, not only display the raw tables.</p>',
+        """
+        <div class="app-header">
+            <div class="title-row">
+                <div>
+                    <div class="eyebrow">Analytics Engineering Portfolio Project</div>
+                    <h1 class="app-title">FIFA World Cup 2026 Prediction Analytics</h1>
+                    <p class="app-subtitle">
+                        A modeled tournament forecast built from dbt feature marts, FIFA rankings,
+                        international results, squad profiles, and Python simulation logic.
+                    </p>
+                </div>
+                <div class="stack-pills">
+                    <span class="pill">dbt</span>
+                    <span class="pill">DuckDB</span>
+                    <span class="pill">Python</span>
+                    <span class="pill">Streamlit</span>
+                </div>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
 
-def render_overview(
-    matches: pd.DataFrame,
-    metrics: pd.DataFrame,
-    selected_team: str,
-) -> None:
+def render_sidebar(
+    teams: pd.DataFrame,
+    standings: pd.DataFrame,
+) -> tuple[str, str]:
+    groups = ["All groups", *sorted(standings["group_letter"].dropna().unique())]
+    team_names = ["All teams", *sorted(teams["team_name"].dropna().unique())]
+
+    with st.sidebar:
+        st.header("Focus")
+        selected_team = st.selectbox(
+            "Team",
+            team_names,
+            help="Highlights the team across bracket, group, team, and match views.",
+        )
+        selected_group = st.selectbox(
+            "Group",
+            groups,
+            help="Narrows group-stage standings and match context.",
+        )
+
+        if selected_team == "All teams":
+            top_team = teams.sort_values("dashboard_strength_index", ascending=False).iloc[0]
+            sidebar_card(
+                "Field leader",
+                top_team["team_name"],
+                [
+                    ("Strength index", f"{top_team['dashboard_strength_index']:.1f}"),
+                    ("FIFA rank", int(top_team["fifa_rank"])),
+                    ("Group", top_team["group_letter"]),
+                ],
+            )
+        else:
+            row = teams.loc[teams["team_name"] == selected_team].iloc[0]
+            sidebar_card(
+                "Focused team",
+                selected_team,
+                [
+                    ("Group", row["group_letter"]),
+                    ("FIFA rank", int(row["fifa_rank"])),
+                    ("Strength index", f"{row['dashboard_strength_index']:.1f}"),
+                ],
+            )
+
+    return selected_team, selected_group
+
+
+def sidebar_card(kicker: str, title: str, rows: list[tuple[str, object]]) -> None:
+    row_html = "\n".join(
+        f'<div class="sidebar-row"><span>{safe(label)}</span><strong>{safe(value)}</strong></div>'
+        for label, value in rows
+    )
+    st.markdown(
+        "\n".join(
+            [
+                '<div class="sidebar-card">',
+                f'<div class="sidebar-kicker">{safe(kicker)}</div>',
+                f'<div class="sidebar-title">{safe(title)}</div>',
+                row_html,
+                "</div>",
+            ]
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def render_leader_card(matches: pd.DataFrame) -> None:
     final_row = final_match(matches)
     third_row = third_place_match(matches)
     champion = final_row["predicted_winner_team"]
     runner_up = runner_up_from_final(final_row)
     third_place = third_row["predicted_winner_team"]
+    st.markdown(
+        "\n".join(
+            [
+                '<div class="leader-card">',
+                '<div class="leader-label">Tournament forecast</div>',
+                f'<div class="leader-title">{safe(champion)} win the World Cup</div>',
+                f'<div class="leader-detail">{safe(final_description(final_row))}. '
+                f'{safe(third_place)} are projected to finish third.</div>',
+                '<div class="leader-strip">',
+                f'<div class="leader-mini"><div class="leader-mini-label">Champion</div>'
+                f'<div class="leader-mini-value">{safe(champion)}</div></div>',
+                f'<div class="leader-mini"><div class="leader-mini-label">Runner-up</div>'
+                f'<div class="leader-mini-value">{safe(runner_up)}</div></div>',
+                f'<div class="leader-mini"><div class="leader-mini-label">Third place</div>'
+                f'<div class="leader-mini-value">{safe(third_place)}</div></div>',
+                "</div>",
+                "</div>",
+            ]
+        ),
+        unsafe_allow_html=True,
+    )
 
-    metric_cols = st.columns(3)
-    with metric_cols[0]:
-        metric_card("Predicted champion", champion)
-    with metric_cols[1]:
-        metric_card("Runner-up", runner_up)
-    with metric_cols[2]:
-        metric_card("Third place", third_place)
 
-    metric_cols = st.columns(4)
-    with metric_cols[0]:
-        metric_card("Tournament goals", int(matches["total_goals"].sum()))
-    with metric_cols[1]:
-        metric_card("Penalty matches", int(matches["penalties"].sum()))
-    with metric_cols[2]:
-        metric_card(
-            "Blended outcome accuracy",
-            pct(metric_value(metrics, "blended_scoreline_outcome_accuracy")),
-        )
-    with metric_cols[3]:
-        metric_card(
-            "Exact score accuracy",
-            pct(metric_value(metrics, "reconciled_scoreline_exact_accuracy")),
-        )
+def render_executive_view(
+    matches: pd.DataFrame,
+    metrics: pd.DataFrame,
+    teams: pd.DataFrame,
+    selected_team: str,
+) -> None:
+    section_header(
+        "Executive Summary",
+        "The forecast balances conservative scorelines with team strength signals, then resolves the knockout bracket from the simulated group stage.",
+    )
+    left, right = st.columns([1.12, 0.88])
+    with left:
+        render_leader_card(matches)
+    with right:
+        metric_cols = st.columns(2)
+        with metric_cols[0]:
+            metric_card("Tournament goals", int(matches["total_goals"].sum()), "Across 104 matches")
+        with metric_cols[1]:
+            metric_card("Penalty matches", int(matches["penalties"].sum()), "Knockout decisions")
+        with metric_cols[0]:
+            metric_card(
+                "Outcome accuracy",
+                pct(metric_value(metrics, "blended_scoreline_outcome_accuracy")),
+                "Blended scoreline result",
+            )
+        with metric_cols[1]:
+            metric_card(
+                "Exact score accuracy",
+                pct(metric_value(metrics, "reconciled_scoreline_exact_accuracy")),
+                "Historical validation",
+            )
 
-    story_cols = st.columns(3)
-    with story_cols[0]:
-        story_card(
-            "How to read this",
-            "The dashboard follows the tournament story: overall forecast, bracket, groups, teams, then model quality.",
+    insight_cols = st.columns(4)
+    with insight_cols[0]:
+        insight_card(
+            "Champion path",
+            "Spain survive two penalty decisions",
+            "The model projects close knockout margins, with Spain advancing through Brazil and Argentina after 1-1 draws.",
         )
-    with story_cols[1]:
-        story_card(
-            "What the model is doing",
-            "dbt prepares tested feature tables. Python estimates goals and outcomes, then simulates the bracket from the group predictions.",
+    with insight_cols[1]:
+        insight_card(
+            "Scoring profile",
+            "1-0 and 1-1 are common outputs",
+            "The calibration intentionally favors realistic tournament scorelines over high-variance goal totals.",
         )
-    with story_cols[2]:
-        story_card(
-            "What is uncertain",
-            "Exact scores are hard to predict, so the model is conservative. Close knockout matches often become 1-1 penalty decisions.",
+    with insight_cols[2]:
+        insight_card(
+            "Model health",
+            "Direct outcome sits near target",
+            f"Direct outcome validation is {pct(metric_value(metrics, 'direct_outcome_accuracy'))}, essentially at the 62% target.",
+        )
+    with insight_cols[3]:
+        insight_card(
+            "Data layer",
+            "Feature marts are dashboard-ready",
+            "dbt produces tested team, match, standings, quality, and model metric outputs for this app.",
         )
 
     if selected_team != "All teams":
-        st.subheader(f"{selected_team} Path")
+        section_header(f"{selected_team} Tournament Path")
         journey = team_journey(matches, selected_team)
         if journey.empty:
-            st.info("This team does not appear in the current predicted tournament path.")
+            st.info("This team does not appear in the predicted tournament path.")
         else:
-            display_table(
-                journey,
-                ["Match", "Stage", "Opponent", "Score", "Result"],
-                {},
-            )
+            display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {})
 
-    chart_cols = st.columns([1, 1])
+    chart_cols = st.columns([1.05, 0.95])
     with chart_cols[0]:
-        distribution = outcome_distribution(matches)
-        fig = px.bar(
-            distribution,
-            x="phase_label",
-            y="matches",
-            color="winner_label",
-            barmode="group",
-            labels={
-                "phase_label": "Phase",
-                "winner_label": "Result",
-                "matches": "Matches",
-            },
-            color_discrete_map={
-                "Home": PALETTE["home"],
-                "Away": PALETTE["away"],
-                "Draw": PALETTE["draw"],
-            },
+        contenders = teams.nlargest(12, "dashboard_strength_index").sort_values(
+            "dashboard_strength_index"
         )
-        fig.update_layout(height=340, legend_title_text="")
-        st.plotly_chart(fig, use_container_width=True)
+        fig = px.bar(
+            contenders,
+            x="dashboard_strength_index",
+            y="team_name",
+            orientation="h",
+            labels={"dashboard_strength_index": "Strength index", "team_name": ""},
+            color="confederation",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            hover_data=["fifa_rank", "last_10_points_per_match", "overall_star_power_z"],
+        )
+        fig = polish_figure(fig, 360)
+        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
     with chart_cols[1]:
         scorelines = (
@@ -438,10 +999,23 @@ def render_overview(
             orientation="h",
             labels={"matches": "Matches", "scoreline": "Scoreline"},
             color="matches",
-            color_continuous_scale=["#fef3c7", "#f97316"],
+            color_continuous_scale=["#dbeafe", "#2563eb"],
         )
-        fig.update_layout(height=340, showlegend=False, coloraxis_showscale=False)
-        st.plotly_chart(fig, use_container_width=True)
+        fig = polish_figure(fig, 360)
+        fig.update_layout(showlegend=False, coloraxis_showscale=False)
+        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+
+
+def team_line(team: str, goals: int, winner: str) -> str:
+    winner_class = " winner" if team == winner else ""
+    return "\n".join(
+        [
+            f'<div class="team-line{winner_class}">',
+            f"<span>{safe(team)}</span>",
+            f"<span>{int(goals)}</span>",
+            "</div>",
+        ]
+    )
 
 
 def bracket_card(row: pd.Series, selected_team: str) -> str:
@@ -449,34 +1023,22 @@ def bracket_card(row: pd.Series, selected_team: str) -> str:
     winner = str(row["predicted_winner_team"])
     focus = selected_team != "All teams" and selected_team in {home_team, away_team}
     penalties = " on penalties" if bool(row["penalties"]) else ""
-
-    def team_line(team: str, goals: int) -> str:
-        winner_class = " winner" if team == winner else ""
-        return "\n".join(
-            [
-                f'<div class="team-line{winner_class}">',
-                f"<span>{html.escape(team)}</span>",
-                f"<span>{int(goals)}</span>",
-                "</div>",
-            ]
-        )
-
     return "\n".join(
         [
             f'<div class="match-card{" focus" if focus else ""}">',
             f'<div class="match-meta">Match {int(row["match_id"])}</div>',
-            team_line(home_team, row["predicted_home_goals"]),
-            team_line(away_team, row["predicted_away_goals"]),
-            f'<div class="winner-note">{html.escape(winner)} wins{penalties}</div>',
+            team_line(home_team, row["predicted_home_goals"], winner),
+            team_line(away_team, row["predicted_away_goals"], winner),
+            f'<div class="winner-note">{safe(winner)} wins{safe(penalties)}</div>',
             "</div>",
         ]
     )
 
 
 def render_bracket(matches: pd.DataFrame, selected_team: str) -> None:
-    st.subheader("Predicted Knockout Bracket")
-    section_note(
-        "Each card shows the predicted matchup, scoreline, and advancing team. If a team is selected in the sidebar, its knockout matches are highlighted."
+    section_header(
+        "Predicted Knockout Bracket",
+        "All 32 knockout predictions are shown by round. Close matches that go to penalties remain tied on the scoreline.",
     )
     knockout = matches[matches["competition_phase"] == "knockout"].copy()
     columns = []
@@ -487,19 +1049,25 @@ def render_bracket(matches: pd.DataFrame, selected_team: str) -> None:
             "\n".join(
                 [
                     '<div class="round-column">',
-                    f'<div class="round-title">{html.escape(round_name)}</div>',
+                    f'<div class="round-title">{safe(round_name)}</div>',
                     cards,
                     "</div>",
                 ]
             )
         )
     st.markdown(
-        f'<div class="bracket-grid">{"".join(columns)}</div>',
+        "\n".join(
+            [
+                '<div class="bracket-shell">',
+                f'<div class="bracket-grid">{"".join(columns)}</div>',
+                "</div>",
+            ]
+        ),
         unsafe_allow_html=True,
     )
 
+    section_header("Final Four Detail")
     final_four = knockout[knockout["match_id"].isin([101, 102, 103, 104])]
-    st.subheader("Final Four Detail")
     display_table(
         final_four,
         [
@@ -523,7 +1091,7 @@ def render_bracket(matches: pd.DataFrame, selected_team: str) -> None:
     )
 
 
-def render_group_stage(
+def render_groups(
     matches: pd.DataFrame,
     standings: pd.DataFrame,
     teams: pd.DataFrame,
@@ -531,15 +1099,33 @@ def render_group_stage(
     selected_team: str,
 ) -> None:
     group = effective_group(selected_group, selected_team, teams)
-    if selected_group == "All groups" and selected_team != "All teams":
-        section_note(f"Showing Group {group}, because {selected_team} is the selected team.")
-    else:
-        section_note("Use the group focus control in the sidebar to inspect a different group.")
+    section_header(
+        "Group Stage",
+        "The group view starts with projected qualifiers across the field, then drills into the focused group.",
+    )
 
+    summary_cols = st.columns([0.9, 1.1])
+    with summary_cols[0]:
+        display_table(group_qualifiers(standings), ["Group", "Winner", "Runner-up"], {}, 460)
+    with summary_cols[1]:
+        group_points = standings.sort_values(["group_letter", "group_rank"])
+        fig = px.bar(
+            group_points,
+            x="group_letter",
+            y="points",
+            color="group_rank",
+            labels={"group_letter": "Group", "points": "Points", "group_rank": "Rank"},
+            color_continuous_scale=["#0f766e", "#dbeafe", "#f97316"],
+            hover_data=["team_name", "goal_difference"],
+        )
+        fig = polish_figure(fig, 460)
+        fig.update_layout(coloraxis_showscale=False)
+        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
+
+    section_header(f"Group {group} Detail")
     group_standings = standings[standings["group_letter"] == group].copy()
     group_matches = matches[matches["group"] == group].copy()
 
-    st.subheader(f"Group {group}")
     display_table(
         group_standings,
         [
@@ -571,17 +1157,14 @@ def render_group_stage(
         x="team_name",
         y="points",
         color="goal_difference",
-        labels={
-            "team_name": "Team",
-            "points": "Points",
-            "goal_difference": "Goal difference",
-        },
+        labels={"team_name": "Team", "points": "Points", "goal_difference": "GD"},
         color_continuous_scale=["#f97316", "#f8fafc", "#14b8a6"],
     )
-    fig.update_layout(height=300, coloraxis_showscale=False)
-    st.plotly_chart(fig, use_container_width=True)
+    fig = polish_figure(fig, 280)
+    fig.update_layout(coloraxis_showscale=False)
+    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
-    st.subheader("Group Matches")
+    section_header("Focused Group Matches")
     display_table(
         group_matches,
         [
@@ -609,116 +1192,185 @@ def render_group_stage(
     )
 
 
-def render_team_profiles(
+def render_team_lens(
     teams: pd.DataFrame,
     matches: pd.DataFrame,
     selected_team: str,
 ) -> None:
     if selected_team == "All teams":
-        st.subheader("Team Comparison")
-        section_note("Select a team in the sidebar for a focused profile. This view compares the field.")
+        section_header(
+            "Team Lens",
+            "The field view compares ranking, form, squad signal, and the dashboard composite strength index.",
+        )
         chart_cols = st.columns([1.05, 0.95])
         with chart_cols[0]:
             fig = px.scatter(
                 teams,
-                x="fifa_rank",
+                x="fifa_points",
                 y="overall_star_power_z",
                 color="confederation",
                 size="last_10_points_per_match",
                 hover_name="team_name",
                 labels={
-                    "fifa_rank": "FIFA rank",
+                    "fifa_points": "FIFA points",
                     "overall_star_power_z": "Squad star power",
                     "confederation": "Confederation",
                     "last_10_points_per_match": "Last 10 PPM",
                 },
+                color_discrete_sequence=px.colors.qualitative.Set2,
             )
-            fig.update_xaxes(autorange="reversed")
-            fig.update_layout(height=420, legend_title_text="")
-            st.plotly_chart(fig, use_container_width=True)
+            fig = polish_figure(fig, 430)
+            st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
         with chart_cols[1]:
-            top_form = teams.nlargest(12, "last_10_points_per_match")
-            fig = px.bar(
-                top_form.sort_values("last_10_points_per_match"),
-                x="last_10_points_per_match",
-                y="team_name",
-                orientation="h",
-                labels={
+            display_table(
+                teams.nlargest(14, "dashboard_strength_index"),
+                [
+                    "team_name",
+                    "group_letter",
+                    "fifa_rank",
+                    "dashboard_strength_index",
+                    "last_10_points_per_match",
+                    "overall_star_power_z",
+                ],
+                {
                     "team_name": "Team",
-                    "last_10_points_per_match": "Last 10 points per match",
+                    "group_letter": "Group",
+                    "fifa_rank": "Rank",
+                    "dashboard_strength_index": "Strength",
+                    "last_10_points_per_match": "Form",
+                    "overall_star_power_z": "Star",
                 },
-                color="overall_star_power_z",
-                color_continuous_scale=["#f97316", "#f8fafc", "#14b8a6"],
+                430,
             )
-            fig.update_layout(height=420, coloraxis_showscale=False)
-            st.plotly_chart(fig, use_container_width=True)
-
     else:
         profile = teams.loc[teams["team_name"] == selected_team].iloc[0]
-        st.subheader(selected_team)
-        cols = st.columns(5)
-        cols[0].metric("Group", profile["group_letter"])
-        cols[1].metric("FIFA rank", int(profile["fifa_rank"]))
-        cols[2].metric("Last 10 PPM", f"{profile['last_10_points_per_match']:.2f}")
-        cols[3].metric("Squad players", int(profile["squad_players"]))
-        cols[4].metric("Data complete", f"{profile['profile_completeness_score']:.0%}")
+        section_header(
+            f"{selected_team} Team Lens",
+            "Percentile scores compare the selected team with the rest of the tournament field.",
+        )
+        cards = st.columns(5)
+        with cards[0]:
+            profile_card("Group", profile["group_letter"], "Opening path")
+        with cards[1]:
+            profile_card("FIFA rank", int(profile["fifa_rank"]), f"{profile['fifa_points']:.0f} points")
+        with cards[2]:
+            profile_card("Recent form", f"{profile['last_10_points_per_match']:.2f}", "Points per match")
+        with cards[3]:
+            profile_card("Strength", f"{profile['dashboard_strength_index']:.1f}", "Composite index")
+        with cards[4]:
+            profile_card(
+                "Data coverage",
+                f"{profile['profile_completeness_score']:.0%}",
+                title_label(profile["squad_status"]),
+            )
 
-        st.subheader("Predicted Path")
-        journey = team_journey(matches, selected_team)
-        if journey.empty:
-            st.info("This team does not appear in the current predicted tournament path.")
-        else:
-            display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {})
+        lens_cols = st.columns([0.95, 1.05])
+        with lens_cols[0]:
+            signals = team_signal_scores(teams, selected_team)
+            fig = px.bar(
+                signals.sort_values("Percentile"),
+                x="Percentile",
+                y="Signal",
+                orientation="h",
+                range_x=[0, 100],
+                color="Percentile",
+                color_continuous_scale=["#fee2e2", "#fef3c7", "#14b8a6"],
+                labels={"Percentile": "Field percentile", "Signal": ""},
+            )
+            fig = polish_figure(fig, 350)
+            fig.update_layout(coloraxis_showscale=False)
+            st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
-    st.subheader("Team Table")
+        with lens_cols[1]:
+            journey = team_journey(matches, selected_team)
+            if journey.empty:
+                st.info("This team does not appear in the predicted tournament path.")
+            else:
+                display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {}, 350)
+
+    section_header("Team Profile Table")
     display_table(
-        teams.sort_values("fifa_rank"),
+        teams.sort_values("dashboard_strength_index", ascending=False),
         [
             "team_name",
             "group_letter",
             "fifa_rank",
+            "fifa_points",
             "last_10_points_per_match",
             "last_10_goal_diff_per_match",
             "overall_star_power_z",
             "attacking_star_power_z",
             "avg_corners_for",
             "blended_yellow_cards_for",
+            "dashboard_strength_index",
             "profile_completeness_score",
         ],
         {
             "team_name": "Team",
             "group_letter": "Group",
-            "fifa_rank": "FIFA Rank",
-            "last_10_points_per_match": "Last 10 PPM",
-            "last_10_goal_diff_per_match": "Last 10 GD",
-            "overall_star_power_z": "Star Power",
+            "fifa_rank": "Rank",
+            "fifa_points": "FIFA Points",
+            "last_10_points_per_match": "Form",
+            "last_10_goal_diff_per_match": "GD",
+            "overall_star_power_z": "Star",
             "attacking_star_power_z": "Attack",
             "avg_corners_for": "Corners For",
-            "blended_yellow_cards_for": "Yellow Cards",
-            "profile_completeness_score": "Data Completeness",
+            "blended_yellow_cards_for": "Yellows",
+            "dashboard_strength_index": "Strength",
+            "profile_completeness_score": "Coverage",
         },
+        460,
     )
 
 
-def render_match_explorer(
+def prediction_card(row: pd.Series, selected_team: str) -> str:
+    home_team, away_team = match_team_names(row)
+    focus = selected_team != "All teams" and selected_team in {home_team, away_team}
+    penalties = " Penalties projected." if bool(row["penalties"]) else ""
+    group = "" if pd.isna(row["group"]) else f"Group {row['group']} | "
+    return "\n".join(
+        [
+            f'<div class="prediction-card{" focus" if focus else ""}">',
+            f'<div class="prediction-meta">Match {int(row["match_id"])} | {group}{safe(row["round"])}</div>',
+            '<div class="prediction-main">',
+            f'<div class="prediction-team">{safe(home_team)}</div>',
+            f'<div class="prediction-score">{int(row["predicted_home_goals"])}-{int(row["predicted_away_goals"])}</div>',
+            f'<div class="prediction-team">{safe(away_team)}</div>',
+            "</div>",
+            f'<div class="prediction-detail">Winner: {safe(row["predicted_winner_team"])}. '
+            f'Corners: {int(row["corners"])}. Cards: {int(row["total_cards"])}.{safe(penalties)}</div>',
+            "</div>",
+        ]
+    )
+
+
+def render_match_cards(matches: pd.DataFrame, selected_team: str) -> None:
+    preview = matches.head(12)
+    cards = "\n".join(prediction_card(row, selected_team) for _, row in preview.iterrows())
+    st.markdown(f'<div class="prediction-grid">{cards}</div>', unsafe_allow_html=True)
+
+
+def render_matches(
     matches: pd.DataFrame,
     context: pd.DataFrame,
     selected_group: str,
     selected_team: str,
 ) -> None:
+    section_header(
+        "Match Detail",
+        "Prediction cards keep the current filter readable; the table below preserves the full submission-level detail.",
+    )
     selected_phase = st.radio(
-        "Matches to show",
+        "Phase",
         ["All matches", "Group stage", "Knockout stage"],
         horizontal=True,
     )
     filtered = filtered_match_explorer(matches, selected_phase, selected_group, selected_team)
-    section_note(
-        "This table honors the phase selector above plus the sidebar focus controls. Group focus applies to group-stage rows; knockout rows are controlled by phase and team."
-    )
     if filtered.empty:
-        st.info("No matches match the current filter combination.")
+        st.info("No matches match the current focus.")
     else:
+        render_match_cards(filtered, selected_team)
         display_table(
             filtered,
             [
@@ -751,6 +1403,7 @@ def render_match_explorer(
                 "red_cards": "Reds",
                 "penalties": "Pens",
             },
+            420,
         )
 
     group_context = context.copy()
@@ -762,12 +1415,12 @@ def render_match_explorer(
             | (group_context["away_team"] == selected_team)
         ]
 
-    st.subheader("Why the Group Matches Lean That Way")
-    section_note(
-        "Positive difference values favor the listed home team. Knockout matches are simulated later, so this context table is group-stage only."
+    section_header(
+        "Group-Stage Feature Context",
+        "Positive difference values favor the listed home team. Knockout matchups are generated after group simulation.",
     )
     if group_context.empty:
-        st.info("No group-stage feature context matches the current filters.")
+        st.info("No group-stage feature context matches the current focus.")
     else:
         display_table(
             group_context.sort_values("match_id"),
@@ -792,19 +1445,54 @@ def render_match_explorer(
                 "last_10_points_per_match_diff": "Form Diff",
                 "fifa_rank_diff": "Rank Diff",
                 "fifa_points_diff": "FIFA Points Diff",
-                "overall_star_power_diff": "Star Power Diff",
+                "overall_star_power_diff": "Star Diff",
                 "expected_total_corners": "Corners",
                 "expected_total_yellow_cards": "Yellows",
                 "expected_total_red_cards": "Reds",
             },
+            360,
         )
 
 
-def render_model_quality(
+def render_metric_cards(metrics: pd.DataFrame) -> None:
+    metric_labels = {
+        "rounded_scoreline_outcome_accuracy": "Rounded outcome",
+        "direct_outcome_accuracy": "Direct outcome",
+        "blended_scoreline_outcome_accuracy": "Blended outcome",
+        "reconciled_scoreline_exact_accuracy": "Exact score",
+        "average_goals_mae": "Goals MAE",
+    }
+    cols = st.columns(5)
+    for index, (metric_name, label) in enumerate(metric_labels.items()):
+        row = metric_row(metrics, metric_name)
+        status = str(row["status"])
+        with cols[index]:
+            st.markdown(
+                "\n".join(
+                    [
+                        '<div class="metric-card">',
+                        f'<div class="metric-label">{safe(label)}</div>',
+                        f'<div class="metric-value">{safe(metric_display(row))}</div>',
+                        f'<div class="metric-detail">Target: {safe(metric_display(pd.Series({**row.to_dict(), "current_value": row["target"]})))} '
+                        f'<span class="status-badge {status_class(status)}">{safe(status)}</span></div>',
+                        "</div>",
+                    ]
+                ),
+                unsafe_allow_html=True,
+            )
+
+
+def render_model_evidence(
     metrics: pd.DataFrame,
     quality: pd.DataFrame,
     history: pd.DataFrame,
 ) -> None:
+    section_header(
+        "Model and Data Evidence",
+        "This page connects dashboard outputs back to validation targets and dbt data-quality checks.",
+    )
+    render_metric_cards(metrics)
+
     metric_labels = {
         "rounded_scoreline_outcome_accuracy": "Rounded score outcome",
         "direct_outcome_accuracy": "Direct outcome",
@@ -827,41 +1515,49 @@ def render_model_quality(
 
     chart_cols = st.columns([1.05, 0.95])
     with chart_cols[0]:
-        long_metrics = metric_frame.melt(
+        accuracy_metrics = metric_frame[metric_frame["direction"] == "higher"].copy()
+        long_metrics = accuracy_metrics.melt(
             id_vars=["metric_label", "status"],
             value_vars=["current_display", "target_display"],
             var_name="series",
             value_name="value",
         )
+        long_metrics["series"] = long_metrics["series"].map(
+            {"current_display": "Current", "target_display": "Target"}
+        )
         fig = px.bar(
             long_metrics,
-            x="metric_label",
-            y="value",
+            x="value",
+            y="metric_label",
             color="series",
+            orientation="h",
             barmode="group",
-            labels={"metric_label": "Metric", "value": "Value", "series": ""},
+            labels={"metric_label": "", "value": "Accuracy (%)", "series": ""},
             color_discrete_map={
-                "current_display": "#2563eb",
-                "target_display": "#14b8a6",
+                "Current": PALETTE["blue"],
+                "Target": PALETTE["cyan"],
             },
         )
-        fig.update_layout(height=370, xaxis_tickangle=-20, legend_title_text="")
-        st.plotly_chart(fig, use_container_width=True)
+        fig = polish_figure(fig, 360)
+        fig.update_xaxes(range=[0, 70])
+        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
     with chart_cols[1]:
         quality_summary = quality.copy()
+        quality_summary["check_label"] = quality_summary["check_name"].map(title_label)
+        quality_summary["group_label"] = quality_summary["check_group"].map(title_label)
         fig = px.bar(
             quality_summary,
             x="check_value",
-            y="check_name",
-            color="check_group",
+            y="check_label",
+            color="group_label",
             orientation="h",
-            labels={"check_value": "Value", "check_name": "Check", "check_group": ""},
+            labels={"check_value": "Value", "check_label": "Check", "group_label": ""},
+            color_discrete_sequence=px.colors.qualitative.Set2,
         )
-        fig.update_layout(height=370, legend_title_text="")
-        st.plotly_chart(fig, use_container_width=True)
+        fig = polish_figure(fig, 360)
+        st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
-    st.subheader("Metric Detail")
     display_table(
         metric_frame,
         [
@@ -882,6 +1578,7 @@ def render_model_quality(
         },
     )
 
+    section_header("Historical Goal Environment")
     recent_history = history[history["match_year"] >= 1992].copy()
     history_summary = (
         recent_history.groupby("match_year", as_index=False)
@@ -895,9 +1592,9 @@ def render_model_quality(
         markers=True,
         labels={"match_year": "Year", "avg_total_goals": "Average total goals"},
     )
-    fig.update_traces(line_color="#f97316")
-    fig.update_layout(height=330)
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(line_color=PALETTE["orange"])
+    fig = polish_figure(fig, 330)
+    st.plotly_chart(fig, use_container_width=True, config=PLOT_CONFIG)
 
 
 def main() -> None:
@@ -911,50 +1608,31 @@ def main() -> None:
     history = data["history"]
 
     render_header()
+    selected_team, selected_group = render_sidebar(teams, standings)
 
-    groups = ["All groups", *sorted(standings["group_letter"].dropna().unique())]
-    team_names = ["All teams", *sorted(teams["team_name"].dropna().unique())]
-
-    with st.sidebar:
-        st.header("Focus Controls")
-        selected_team = st.selectbox(
-            "Team focus",
-            team_names,
-            help="Highlights this team in the bracket and filters team/match views.",
-        )
-        selected_group = st.selectbox(
-            "Group focus",
-            groups,
-            help="Controls the group table and group-stage match context.",
-        )
-        if selected_team != "All teams":
-            st.caption(
-                f"Team selected: {selected_team}. Group and match views will focus on that team where possible."
-            )
-
-    tab_overview, tab_bracket, tab_groups, tab_teams, tab_matches, tab_quality = st.tabs(
+    tabs = st.tabs(
         [
-            "Overview",
+            "Executive",
             "Bracket",
-            "Group Stage",
-            "Team Profiles",
-            "Match Explorer",
-            "Model Quality",
+            "Groups",
+            "Team Lens",
+            "Matches",
+            "Model Evidence",
         ]
     )
 
-    with tab_overview:
-        render_overview(matches, metrics, selected_team)
-    with tab_bracket:
+    with tabs[0]:
+        render_executive_view(matches, metrics, teams, selected_team)
+    with tabs[1]:
         render_bracket(matches, selected_team)
-    with tab_groups:
-        render_group_stage(matches, standings, teams, selected_group, selected_team)
-    with tab_teams:
-        render_team_profiles(teams, matches, selected_team)
-    with tab_matches:
-        render_match_explorer(matches, context, selected_group, selected_team)
-    with tab_quality:
-        render_model_quality(metrics, quality, history)
+    with tabs[2]:
+        render_groups(matches, standings, teams, selected_group, selected_team)
+    with tabs[3]:
+        render_team_lens(teams, matches, selected_team)
+    with tabs[4]:
+        render_matches(matches, context, selected_group, selected_team)
+    with tabs[5]:
+        render_model_evidence(metrics, quality, history)
 
 
 if __name__ == "__main__":
