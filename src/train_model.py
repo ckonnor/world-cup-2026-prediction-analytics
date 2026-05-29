@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import unicodedata
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Callable
 
@@ -23,6 +24,7 @@ from world_cup.paths import (
     MODEL_METRICS_V2_PATH,
     MODEL_PREDICTIONS_V2_PATH,
     MODEL_TEAM_FEATURES_V2_PATH,
+    MODEL_TOURNAMENT_SIMULATION_V2_PATH,
     PROCESSED_DIR,
 )
 
@@ -153,6 +155,8 @@ TOURNAMENT_FOCUSED_TOURNAMENTS = {
 SCORELINE_MAX_GOALS = 8
 SCORELINE_BLEND_WEIGHT_CANDIDATES = np.arange(0.0, 1.01, 0.05)
 MIN_OUTCOME_PROBABILITY = 1e-12
+TOURNAMENT_SIMULATION_RUNS = 5000
+TOURNAMENT_SIMULATION_RANDOM_SEED = 202606
 MODEL_METRIC_TARGETS = {
     "rounded_scoreline_outcome_accuracy": {
         "direction": "higher",
@@ -599,6 +603,51 @@ def _select_blended_scoreline(
 
     _, _, _, _, home_goals, away_goals = max(candidates)
     return int(home_goals), int(away_goals)
+
+
+def _scoreline_probability_grid(
+    home_expected_goals: float,
+    away_expected_goals: float,
+    outcome_probabilities: np.ndarray,
+    classes: np.ndarray,
+    outcome_blend_weight: float,
+) -> pd.DataFrame:
+    outcome_probability_by_class = _outcome_probability_lookup(outcome_probabilities, classes)
+    outcome_blend_weight = float(np.clip(outcome_blend_weight, 0.0, 1.0))
+    goal_blend_weight = 1.0 - outcome_blend_weight
+    rows = []
+    log_probabilities = []
+
+    for home_goals in range(0, SCORELINE_MAX_GOALS + 1):
+        for away_goals in range(0, SCORELINE_MAX_GOALS + 1):
+            outcome = outcome_from_scores(home_goals, away_goals)
+            scoreline_log_probability = _poisson_log_probability(
+                home_goals,
+                home_expected_goals,
+            ) + _poisson_log_probability(
+                away_goals,
+                away_expected_goals,
+            )
+            outcome_log_probability = math.log(outcome_probability_by_class[outcome])
+            blended_log_probability = (
+                goal_blend_weight * scoreline_log_probability
+                + outcome_blend_weight * outcome_log_probability
+            )
+            rows.append(
+                {
+                    "home_goals": home_goals,
+                    "away_goals": away_goals,
+                    "outcome": outcome,
+                }
+            )
+            log_probabilities.append(blended_log_probability)
+
+    log_probability_array = np.array(log_probabilities)
+    probability_array = np.exp(log_probability_array - log_probability_array.max())
+    probability_array = probability_array / probability_array.sum()
+    grid = pd.DataFrame(rows)
+    grid["probability"] = probability_array
+    return grid
 
 
 def _score_predictions(
@@ -1395,8 +1444,8 @@ def _group_tiebreak_strengths(
     models: TrainedGoalModels,
 ) -> dict[str, float]:
     teams = sorted(
-        set(group_predictions["home_team"].tolist())
-        | set(group_predictions["away_team"].tolist())
+        {canonical_team_name(team) for team in group_predictions["home_team"].tolist()}
+        | {canonical_team_name(team) for team in group_predictions["away_team"].tolist()}
     )
     return {
         team: _team_tiebreak_strength(
@@ -2155,6 +2204,309 @@ def build_model_team_features(
     return pd.DataFrame(rows)
 
 
+def _sample_scoreline(distribution: pd.DataFrame, rng: np.random.Generator) -> tuple[int, int]:
+    selected_index = int(rng.choice(len(distribution), p=distribution["probability"].to_numpy()))
+    row = distribution.iloc[selected_index]
+    return int(row["home_goals"]), int(row["away_goals"])
+
+
+def _penalty_home_win_probability(
+    home_team: str,
+    away_team: str,
+    models: TrainedGoalModels,
+) -> float:
+    return _elo_expected_score(
+        _elo_rating(home_team, models),
+        _elo_rating(away_team, models),
+        neutral=True,
+    )
+
+
+def _group_scoreline_distributions(
+    world_cup_matches: pd.DataFrame,
+    team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+) -> list[pd.DataFrame]:
+    home_expected_goals, away_expected_goals = _predict_expected_goals(
+        world_cup_matches,
+        team_strength,
+        squad_strength,
+        latest_fifa_rankings,
+        models,
+    )
+    outcome_predictions = _predict_match_outcomes(
+        world_cup_matches,
+        team_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+    )
+    outcome_probability_columns = [
+        f"outcome_probability_{class_name}" for class_name in models.outcome_classes
+    ]
+    return [
+        _scoreline_probability_grid(
+            float(home_goals),
+            float(away_goals),
+            probabilities,
+            models.outcome_classes,
+            models.scoreline_outcome_blend_weight,
+        )
+        for home_goals, away_goals, probabilities in zip(
+            home_expected_goals,
+            away_expected_goals,
+            outcome_predictions[outcome_probability_columns].to_numpy(),
+        )
+    ]
+
+
+def _match_distribution_for_teams(
+    home_team: str,
+    away_team: str,
+    team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+    distribution_cache: dict[tuple[str, str], tuple[pd.DataFrame, float]],
+) -> tuple[pd.DataFrame, float]:
+    cache_key = (_normalise_text(home_team), _normalise_text(away_team))
+    if cache_key in distribution_cache:
+        return distribution_cache[cache_key]
+
+    match = pd.DataFrame([{"home_team": home_team, "away_team": away_team}])
+    home_expected_goals, away_expected_goals = _predict_expected_goals(
+        match,
+        team_strength,
+        squad_strength,
+        latest_fifa_rankings,
+        models,
+    )
+    outcome_predictions = _predict_match_outcomes(
+        match,
+        team_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+    )
+    outcome_probability_columns = [
+        f"outcome_probability_{class_name}" for class_name in models.outcome_classes
+    ]
+    distribution = _scoreline_probability_grid(
+        float(home_expected_goals[0]),
+        float(away_expected_goals[0]),
+        outcome_predictions.loc[0, outcome_probability_columns].to_numpy(),
+        models.outcome_classes,
+        models.scoreline_outcome_blend_weight,
+    )
+    penalty_home_probability = _penalty_home_win_probability(home_team, away_team, models)
+    distribution_cache[cache_key] = (distribution, penalty_home_probability)
+    return distribution, penalty_home_probability
+
+
+def _sample_knockout_result(
+    home_team: str,
+    away_team: str,
+    team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+    distribution_cache: dict[tuple[str, str], tuple[pd.DataFrame, float]],
+    rng: np.random.Generator,
+) -> dict[str, object]:
+    distribution, penalty_home_probability = _match_distribution_for_teams(
+        home_team,
+        away_team,
+        team_strength,
+        squad_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+        distribution_cache,
+    )
+    home_goals, away_goals = _sample_scoreline(distribution, rng)
+    if home_goals > away_goals:
+        winner_label = "home"
+        penalties = False
+    elif away_goals > home_goals:
+        winner_label = "away"
+        penalties = False
+    else:
+        winner_label = "home" if rng.random() < penalty_home_probability else "away"
+        penalties = True
+
+    winner_team = home_team if winner_label == "home" else away_team
+    loser_team = away_team if winner_label == "home" else home_team
+    return {
+        "home_goals": home_goals,
+        "away_goals": away_goals,
+        "winner_label": winner_label,
+        "winner_team": winner_team,
+        "loser_team": loser_team,
+        "penalties": penalties,
+    }
+
+
+def _increment_reached_round(
+    round_counts: dict[str, dict[str, int]],
+    team_name: str,
+    round_name: str,
+) -> None:
+    round_key_by_name = {
+        "Round of 32": "round_of_32_count",
+        "Round of 16": "round_of_16_count",
+        "Quarter-final": "quarter_final_count",
+        "Semi-final": "semi_final_count",
+        "Final": "final_count",
+    }
+    round_key = round_key_by_name.get(round_name)
+    if round_key is not None:
+        round_counts[team_name][round_key] += 1
+
+
+def simulate_tournament_probabilities(
+    world_cup_matches: pd.DataFrame,
+    knockout_slots: pd.DataFrame,
+    team_strength: pd.DataFrame,
+    squad_strength: pd.DataFrame,
+    latest_fifa_rankings: pd.DataFrame,
+    external_player_strength: pd.DataFrame,
+    models: TrainedGoalModels,
+    simulation_runs: int = TOURNAMENT_SIMULATION_RUNS,
+    random_seed: int = TOURNAMENT_SIMULATION_RANDOM_SEED,
+) -> pd.DataFrame:
+    rng = np.random.default_rng(random_seed)
+    group_matches = world_cup_matches.assign(
+        _match_id_sort=pd.to_numeric(world_cup_matches["match_id"]),
+    ).sort_values("_match_id_sort")
+    group_distributions = _group_scoreline_distributions(
+        group_matches,
+        team_strength,
+        squad_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+    )
+    group_tiebreak_strengths = _group_tiebreak_strengths(
+        group_matches.rename(columns={"group_letter": "group"}),
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+    )
+    slots = _normalise_knockout_slots(knockout_slots)
+    sorted_slots = slots.assign(_match_id_sort=pd.to_numeric(slots["match_id"])).sort_values(
+        "_match_id_sort"
+    )
+
+    teams = sorted(
+        set(group_matches["home_team"].map(canonical_team_name).tolist())
+        | set(group_matches["away_team"].map(canonical_team_name).tolist())
+    )
+    round_counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    group_points_total: dict[str, float] = defaultdict(float)
+    distribution_cache: dict[tuple[str, str], tuple[pd.DataFrame, float]] = {}
+
+    for _ in range(simulation_runs):
+        sampled_group_rows = []
+        for row, distribution in zip(group_matches.itertuples(index=False), group_distributions):
+            home_goals, away_goals = _sample_scoreline(distribution, rng)
+            sampled_group_rows.append(
+                {
+                    "match_id": getattr(row, "match_id"),
+                    "group": getattr(row, "group_letter"),
+                    "home_team": canonical_team_name(getattr(row, "home_team")),
+                    "away_team": canonical_team_name(getattr(row, "away_team")),
+                    "predicted_home_goals": home_goals,
+                    "predicted_away_goals": away_goals,
+                    "winning_team": outcome_from_scores(home_goals, away_goals),
+                }
+            )
+
+        sampled_group_predictions = pd.DataFrame(sampled_group_rows)
+        standings = build_group_standings(
+            sampled_group_predictions,
+            group_tiebreak_strengths,
+        )
+        for standing_row in standings.itertuples(index=False):
+            team_name = str(getattr(standing_row, "team"))
+            group_points_total[team_name] += float(getattr(standing_row, "points"))
+            if int(getattr(standing_row, "group_rank")) == 1:
+                round_counts[team_name]["group_winner_count"] += 1
+
+        match_results: dict[int, dict[str, str]] = {}
+        used_third_groups: set[str] = set()
+        for slot_row in sorted_slots.drop(columns="_match_id_sort").itertuples(index=False):
+            row_data = slot_row._asdict()
+            match_id = int(row_data["match_id"])
+            round_name = str(row_data["round"])
+            predicted_home_team = resolve_knockout_slot(
+                str(row_data["slot_home"]),
+                standings,
+                match_results,
+                used_third_groups,
+            )
+            predicted_away_team = resolve_knockout_slot(
+                str(row_data["slot_away"]),
+                standings,
+                match_results,
+                used_third_groups,
+            )
+            _increment_reached_round(round_counts, predicted_home_team, round_name)
+            _increment_reached_round(round_counts, predicted_away_team, round_name)
+
+            result = _sample_knockout_result(
+                predicted_home_team,
+                predicted_away_team,
+                team_strength,
+                squad_strength,
+                latest_fifa_rankings,
+                external_player_strength,
+                models,
+                distribution_cache,
+                rng,
+            )
+            match_results[match_id] = {
+                "winner_team": str(result["winner_team"]),
+                "loser_team": str(result["loser_team"]),
+            }
+            if round_name == "Final":
+                round_counts[str(result["winner_team"])]["champion_count"] += 1
+
+    rows = []
+    for team_name in teams:
+        counts = round_counts[team_name]
+        rows.append(
+            {
+                "team_name": team_name,
+                "simulations": simulation_runs,
+                "avg_group_points": round(
+                    group_points_total[team_name] / simulation_runs,
+                    3,
+                ),
+                "group_winner_probability": counts["group_winner_count"] / simulation_runs,
+                "round_of_32_probability": counts["round_of_32_count"] / simulation_runs,
+                "round_of_16_probability": counts["round_of_16_count"] / simulation_runs,
+                "quarter_final_probability": counts["quarter_final_count"] / simulation_runs,
+                "semi_final_probability": counts["semi_final_count"] / simulation_runs,
+                "final_probability": counts["final_count"] / simulation_runs,
+                "champion_probability": counts["champion_count"] / simulation_runs,
+            }
+        )
+
+    return (
+        pd.DataFrame(rows)
+        .sort_values(
+            ["champion_probability", "final_probability", "semi_final_probability", "team_name"],
+            ascending=[False, False, False, True],
+        )
+        .reset_index(drop=True)
+    )
+
+
 def main() -> None:
     training_data = _load_table("main_features.features_historical_match_training")
     world_cup_matches = _load_table("main_staging.stg_group_fixtures")
@@ -2235,6 +2587,31 @@ def main() -> None:
     )
     predictions = build_model_predictions(group_predictions, knockout_predictions)
     model_team_features = build_model_team_features(team_strength, models)
+    tournament_simulation = simulate_tournament_probabilities(
+        world_cup_matches,
+        knockout_slots,
+        team_strength,
+        squad_strength,
+        latest_fifa_rankings,
+        external_player_strength,
+        models,
+    )
+    simulation_favorite = tournament_simulation.iloc[0]
+    metrics["tournament_simulation"] = {
+        "enabled": True,
+        "simulation_runs": TOURNAMENT_SIMULATION_RUNS,
+        "random_seed": TOURNAMENT_SIMULATION_RANDOM_SEED,
+        "method": (
+            "Repeated tournament simulation samples group-stage scorelines and dynamic "
+            "knockout matchups from the calibrated scoreline probability grid. This "
+            "estimates advancement and championship probabilities without changing the "
+            "single deterministic submission bracket."
+        ),
+        "championship_favorite": str(simulation_favorite["team_name"]),
+        "championship_favorite_probability": float(
+            simulation_favorite["champion_probability"]
+        ),
+    }
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     MODEL_GROUP_PREDICTIONS_V2_PATH.write_text(
@@ -2251,6 +2628,10 @@ def main() -> None:
     )
     MODEL_TEAM_FEATURES_V2_PATH.write_text(
         model_team_features.to_csv(index=False),
+        encoding="utf-8",
+    )
+    MODEL_TOURNAMENT_SIMULATION_V2_PATH.write_text(
+        tournament_simulation.to_csv(index=False),
         encoding="utf-8",
     )
     MODEL_METRICS_V2_PATH.write_text(
@@ -2291,6 +2672,7 @@ def main() -> None:
     print(f"Wrote knockout predictions to {MODEL_KNOCKOUT_PREDICTIONS_V2_PATH}")
     print(f"Wrote combined predictions to {MODEL_PREDICTIONS_V2_PATH}")
     print(f"Wrote team model features to {MODEL_TEAM_FEATURES_V2_PATH}")
+    print(f"Wrote tournament simulation to {MODEL_TOURNAMENT_SIMULATION_V2_PATH}")
     print(f"Wrote metrics to {MODEL_METRICS_V2_PATH}")
 
 

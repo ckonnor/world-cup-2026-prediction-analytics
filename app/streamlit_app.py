@@ -126,6 +126,11 @@ TARGET_RATIONALE = [
         "This isolates the winner-picking model from score rounding. Around 62% is a realistic public-data target for international soccer without betting odds or live injury news.",
     ),
     (
+        "Raw rounded outcome",
+        "Diagnostic",
+        "This tracks the plain rounded expected-goals model before the outcome classifier reweights scorelines. It is useful for model health, but it is not the final submission metric.",
+    ),
+    (
         "Exact score",
         "High-value",
         "Exact scores are volatile but heavily rewarded. The model intentionally keeps many results near common low-scoring outcomes such as 1-0 and 1-1.",
@@ -836,6 +841,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         "metrics": pd.read_csv(DATA_DIR / "dashboard_model_metrics.csv"),
         "quality": pd.read_csv(DATA_DIR / "dashboard_data_quality.csv"),
         "history": pd.read_csv(DATA_DIR / "dashboard_historical_competition_summary.csv"),
+        "simulation": pd.read_csv(DATA_DIR / "dashboard_tournament_simulation.csv"),
     }
     data["matches"]["date_utc"] = pd.to_datetime(data["matches"]["date_utc"], utc=True)
     data["context"]["match_date_utc"] = pd.to_datetime(data["context"]["match_date_utc"], utc=True)
@@ -1379,6 +1385,144 @@ def render_leader_card(matches: pd.DataFrame) -> None:
     )
 
 
+def simulation_view(simulation: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFrame:
+    frame = simulation.copy()
+    probability_columns = [
+        "group_winner_probability",
+        "round_of_32_probability",
+        "round_of_16_probability",
+        "quarter_final_probability",
+        "semi_final_probability",
+        "final_probability",
+        "champion_probability",
+    ]
+    for column in probability_columns:
+        frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0.0)
+    frame["avg_group_points"] = pd.to_numeric(
+        frame["avg_group_points"],
+        errors="coerce",
+    ).fillna(0.0)
+    return frame.merge(
+        teams[["team_name", "confederation", "dashboard_strength_index"]],
+        on="team_name",
+        how="left",
+    )
+
+
+def render_simulation_summary(
+    simulation: pd.DataFrame,
+    matches: pd.DataFrame,
+    teams: pd.DataFrame,
+) -> None:
+    if simulation.empty:
+        return
+
+    sim = simulation_view(simulation, teams)
+    favorite = sim.sort_values("champion_probability", ascending=False).iloc[0]
+    deterministic_champion = str(final_match(matches)["predicted_winner_team"])
+    deterministic_row = sim.loc[sim["team_name"] == deterministic_champion]
+    deterministic_probability = (
+        float(deterministic_row.iloc[0]["champion_probability"])
+        if not deterministic_row.empty
+        else 0.0
+    )
+    top_three_probability = float(
+        sim.nlargest(3, "champion_probability")["champion_probability"].sum()
+    )
+    simulation_runs = int(pd.to_numeric(sim["simulations"], errors="coerce").dropna().max())
+
+    section_header(
+        "Championship Probability Layer",
+        f"The submitted bracket is one internally consistent path. This view samples "
+        f"{simulation_runs:,} full tournaments from the same calibrated scoreline model "
+        "to estimate how often each team survives the field.",
+    )
+    summary_cols = st.columns(3)
+    with summary_cols[0]:
+        metric_card(
+            "Simulation favorite",
+            str(favorite["team_name"]),
+            f"{pct(float(favorite['champion_probability']))} title probability",
+        )
+    with summary_cols[1]:
+        metric_card(
+            "Submitted champion odds",
+            pct(deterministic_probability),
+            deterministic_champion,
+        )
+    with summary_cols[2]:
+        metric_card(
+            "Top-three title share",
+            pct(top_three_probability),
+            "How concentrated the field is",
+        )
+
+    chart_cols = st.columns([1.05, 0.95])
+    with chart_cols[0]:
+        contenders = sim.nlargest(12, "champion_probability").sort_values(
+            "champion_probability",
+        )
+        contenders["champion_probability_pct"] = contenders["champion_probability"] * 100
+        fig = px.bar(
+            contenders,
+            x="champion_probability_pct",
+            y="team_name",
+            orientation="h",
+            color="confederation",
+            color_discrete_sequence=px.colors.qualitative.Set2,
+            labels={
+                "champion_probability_pct": "Title probability (%)",
+                "team_name": "",
+                "confederation": "",
+            },
+            hover_data={
+                "champion_probability_pct": ":.1f",
+                "final_probability": ":.1%",
+                "semi_final_probability": ":.1%",
+                "dashboard_strength_index": ":.1f",
+                "confederation": False,
+            },
+        )
+        fig = polish_figure(fig, 360)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=PLOT_CONFIG,
+            key="executive_championship_probabilities",
+        )
+
+    with chart_cols[1]:
+        probability_table = sim.nlargest(8, "champion_probability").copy()
+        for column in [
+            "round_of_16_probability",
+            "quarter_final_probability",
+            "semi_final_probability",
+            "final_probability",
+            "champion_probability",
+        ]:
+            probability_table[column] = probability_table[column].map(pct)
+        display_table(
+            probability_table,
+            [
+                "team_name",
+                "round_of_16_probability",
+                "quarter_final_probability",
+                "semi_final_probability",
+                "final_probability",
+                "champion_probability",
+            ],
+            {
+                "team_name": "Team",
+                "round_of_16_probability": "R16",
+                "quarter_final_probability": "QF",
+                "semi_final_probability": "SF",
+                "final_probability": "Final",
+                "champion_probability": "Title",
+            },
+            360,
+        )
+
+
 def render_project_story() -> None:
     section_header(
         "Project Build",
@@ -1476,6 +1620,7 @@ def render_executive_view(
     matches: pd.DataFrame,
     metrics: pd.DataFrame,
     teams: pd.DataFrame,
+    simulation: pd.DataFrame,
 ) -> None:
     section_header(
         "Forecast Overview",
@@ -1506,9 +1651,9 @@ def render_executive_view(
     insight_cols = st.columns(4)
     with insight_cols[0]:
         insight_card(
-            "Champion path",
-            "Spain survive two penalty decisions",
-            "The model projects close knockout margins, with Spain advancing through Brazil and Argentina after 1-1 draws.",
+            "Uncertainty layer",
+            "One bracket is not the whole forecast",
+            "Repeated simulations estimate title probabilities across many plausible group tables and knockout paths.",
         )
     with insight_cols[1]:
         insight_card(
@@ -1528,6 +1673,8 @@ def render_executive_view(
             "Feature marts are dashboard-ready",
             "dbt produces tested team, match, standings, quality, and model metric outputs for this app.",
         )
+
+    render_simulation_summary(simulation, matches, teams)
 
     chart_cols = st.columns([1.05, 0.95])
     with chart_cols[0]:
@@ -1592,8 +1739,9 @@ def render_overview(
     metrics: pd.DataFrame,
     teams: pd.DataFrame,
     history: pd.DataFrame,
+    simulation: pd.DataFrame,
 ) -> None:
-    render_executive_view(matches, metrics, teams)
+    render_executive_view(matches, metrics, teams, simulation)
     render_project_story()
     render_dbt_usage_section()
     render_historical_goal_environment(history)
@@ -2120,7 +2268,7 @@ def render_tournament_view(
 
 def render_metric_cards(metrics: pd.DataFrame) -> None:
     metric_labels = {
-        "rounded_scoreline_outcome_accuracy": "Rounded outcome",
+        "rounded_scoreline_outcome_accuracy": "Raw rounded",
         "direct_outcome_accuracy": "Direct outcome",
         "blended_scoreline_outcome_accuracy": "Blended outcome",
         "reconciled_scoreline_exact_accuracy": "Exact score",
@@ -2196,7 +2344,7 @@ def render_model_evidence(
     )
 
     metric_labels = {
-        "rounded_scoreline_outcome_accuracy": "Rounded score outcome",
+        "rounded_scoreline_outcome_accuracy": "Raw rounded outcome",
         "direct_outcome_accuracy": "Direct outcome",
         "blended_scoreline_outcome_accuracy": "Blended outcome",
         "reconciled_scoreline_exact_accuracy": "Exact score",
@@ -2314,6 +2462,7 @@ def main() -> None:
     metrics = data["metrics"]
     quality = data["quality"]
     history = data["history"]
+    simulation = data["simulation"]
 
     render_header()
     selected_team, selected_group = render_sidebar(teams, standings)
@@ -2328,7 +2477,7 @@ def main() -> None:
     )
 
     with tabs[0]:
-        render_overview(matches, metrics, teams, history)
+        render_overview(matches, metrics, teams, history, simulation)
     with tabs[1]:
         render_tournament_view(matches, standings, teams, context, selected_group, selected_team)
     with tabs[2]:

@@ -6,7 +6,7 @@ This project now has a BI-ready layer and a Streamlit dashboard for a resume-fri
 
 The dashboard should answer four questions:
 
-1. Which teams does the model expect to advance?
+1. Which teams does the model expect to advance or win the title?
 2. Why are certain teams favored?
 3. Where are the highest-risk or most interesting matches?
 4. How reliable and complete is the data feeding the forecast?
@@ -39,6 +39,7 @@ data/bi_exports/
 | `dashboard_model_metrics.csv` | One row per model metric | Guardrail, target, stretch, and current model performance |
 | `dashboard_data_quality.csv` | One row per validation check | Submission row counts and prediction distribution checks |
 | `dashboard_historical_competition_summary.csv` | One row per year/tournament | Training-data coverage and historical scoring environment |
+| `dashboard_tournament_simulation.csv` | One row per team | Advancement and title probabilities from repeated full-tournament simulations |
 
 ## Streamlit Path
 
@@ -76,16 +77,14 @@ Looker Studio is a good free presentation layer, but the local DuckDB file is no
 
 ## Streamlit Dashboard Pages
 
-The current Streamlit dashboard is organized into six stakeholder-facing pages.
+The current Streamlit dashboard is organized into four stakeholder-facing pages.
 
 | Page | Purpose | Primary Sources |
 | --- | --- | --- |
-| Executive | Lead with the tournament forecast, key metrics, and strongest narrative takeaways. | `dashboard_match_predictions.csv`, `dashboard_model_metrics.csv`, `dashboard_team_profiles.csv` |
-| Bracket | Show all knockout predictions in a readable bracket-style layout. | `dashboard_match_predictions.csv` |
-| Groups | Show projected group qualifiers, then drill into a focused group table and fixtures. | `dashboard_group_standings.csv`, `dashboard_match_predictions.csv` |
-| Team Lens | Compare the field or inspect one selected team across strength signals and predicted path. | `dashboard_team_profiles.csv`, `dashboard_match_predictions.csv` |
-| Matches | Present readable prediction cards plus the full match-level table and feature context. | `dashboard_match_predictions.csv`, `dashboard_match_feature_context.csv` |
-| Model Evidence | Connect forecast outputs back to validation targets and data-quality checks. | `dashboard_model_metrics.csv`, `dashboard_data_quality.csv`, `dashboard_historical_competition_summary.csv` |
+| Overview | Lead with the deterministic forecast, validation metrics, championship probabilities, project story, dbt usage, and scoring environment. | `dashboard_match_predictions.csv`, `dashboard_model_metrics.csv`, `dashboard_team_profiles.csv`, `dashboard_tournament_simulation.csv`, `dashboard_historical_competition_summary.csv` |
+| Tournament | Show the deterministic bracket, group standings, fixtures, match cards, and feature context. | `dashboard_match_predictions.csv`, `dashboard_group_standings.csv`, `dashboard_match_feature_context.csv` |
+| Teams | Compare the field or inspect one selected team across strength signals and predicted path. | `dashboard_team_profiles.csv`, `dashboard_match_predictions.csv` |
+| Methodology | Connect forecast outputs back to validation targets, modeling choices, data quality, and source links. | `dashboard_model_metrics.csv`, `dashboard_data_quality.csv`, `dashboard_historical_competition_summary.csv` |
 
 ## Portfolio Framing
 

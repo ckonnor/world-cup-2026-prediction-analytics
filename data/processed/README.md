@@ -11,6 +11,8 @@ Generated outputs live here, including:
 - `model_group_predictions_v2.csv`
 - `model_knockout_predictions_v2.csv`
 - `model_predictions_v2.csv`
+- `model_team_features_v2.csv`
+- `model_tournament_simulation_v2.csv`
 - `model_metrics_v2.json`
 - `submission_group_predictions.csv`
 - `submission_knockout_predictions.csv`

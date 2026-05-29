@@ -67,6 +67,8 @@ The external match-feature source includes context flags such as `is_neutral`, b
 
 Group standings use standard points, goal difference, and goals-for ordering. If teams remain tied after those fields, the prediction pipeline uses model tiebreak strength instead of alphabetical order. This is a proxy for official fair-play or drawing-lots tiebreakers that are not knowable before the tournament.
 
+The deterministic bracket remains the submission artifact, but the pipeline also runs repeated full-tournament simulations. Each run samples group-stage scorelines from the calibrated scoreline probability grid, rebuilds the group table, resolves the dynamic knockout bracket, samples knockout scorelines, and resolves tied knockout matches as penalties. This does not change validation accuracy by itself; it quantifies uncertainty around the single submitted path.
+
 Corners and cards now come from a separate event profile rather than fixed constants:
 
 - Corners use weighted team-level FootyStats event rates from World Cup qualifiers and recent World Cups.
@@ -106,7 +108,7 @@ These are working targets for this project, not guarantees. The guardrail is the
 
 | Metric | Current | Guardrail | Target | Stretch | Direction |
 | --- | ---: | ---: | ---: | ---: | --- |
-| Rounded scoreline outcome accuracy | 54.7% | 54.5% | 57.0% | 60.0% | Higher is better |
+| Raw rounded scoreline outcome accuracy | 54.7% | 54.5% | 57.0% | 60.0% | Higher is better |
 | Direct outcome accuracy | 62.4% | 58.0% | 62.0% | 65.0% | Higher is better |
 | Reconciled scoreline exact accuracy | 14.7% | 10.0% | 12.0% | 14.0% | Higher is better |
 | Average goals MAE | 0.907 | 0.950 | 0.900 | 0.860 | Lower is better |
@@ -122,10 +124,11 @@ data/processed/model_group_predictions_v2.csv
 data/processed/model_knockout_predictions_v2.csv
 data/processed/model_predictions_v2.csv
 data/processed/model_team_features_v2.csv
+data/processed/model_tournament_simulation_v2.csv
 data/processed/model_metrics_v2.json
 ```
 
-`model_group_predictions_v2.csv` and `model_knockout_predictions_v2.csv` match the two DataCamp workbook sections. `model_predictions_v2.csv` combines all 104 matches for local analysis. `model_team_features_v2.csv` publishes the Python-owned Elo and adjusted-form team features into the BI layer.
+`model_group_predictions_v2.csv` and `model_knockout_predictions_v2.csv` match the two DataCamp workbook sections. `model_predictions_v2.csv` combines all 104 matches for local analysis. `model_team_features_v2.csv` publishes the Python-owned Elo and adjusted-form team features into the BI layer. `model_tournament_simulation_v2.csv` publishes team-level advancement and championship probabilities for the dashboard.
 
 ## Known Limitations
 

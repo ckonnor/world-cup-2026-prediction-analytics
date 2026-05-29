@@ -9,6 +9,7 @@ from train_model import (
     _metric_target_status,
     _predict_event_counts,
     _select_blended_scoreline,
+    _scoreline_probability_grid,
     outcome_from_scores,
 )
 
@@ -68,6 +69,21 @@ def test_select_blended_scoreline_balances_goals_and_outcome_probabilities() -> 
         classes,
         0.60,
     ) == (1, 0)
+
+
+def test_scoreline_probability_grid_is_normalized() -> None:
+    classes = np.array(["away", "draw", "home"])
+    grid = _scoreline_probability_grid(
+        1.3,
+        0.9,
+        np.array([0.20, 0.25, 0.55]),
+        classes,
+        0.30,
+    )
+
+    assert len(grid) == 81
+    assert np.isclose(grid["probability"].sum(), 1.0)
+    assert {"home", "draw", "away"} == set(grid["outcome"])
 
 
 def test_metric_target_status_handles_higher_and_lower_metrics() -> None:

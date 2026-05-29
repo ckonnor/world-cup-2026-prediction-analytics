@@ -7,3 +7,5 @@ This folder is the local output target for dashboard-ready CSV files created by:
 ```
 
 The generated CSV files are ignored by git because they are reproducible from the dbt warehouse and model outputs.
+
+The hosted dashboard snapshot in `app/data/` is copied from this folder after refreshes, including the tournament simulation probability table.

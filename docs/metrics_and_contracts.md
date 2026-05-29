@@ -9,7 +9,7 @@ This project uses two kinds of contracts:
 
 | Metric | Definition | Direction | Why It Matters |
 | --- | --- | --- | --- |
-| Rounded scoreline outcome accuracy | Accuracy of the winner/draw implied by rounded goal predictions. | Higher is better | Checks whether the score model points to the right match result. |
+| Raw rounded scoreline outcome accuracy | Accuracy of the winner/draw implied by rounded goal predictions before reconciliation. | Higher is better | Checks whether the goal model points to the right match result, but it is a diagnostic rather than the final submission metric. |
 | Direct outcome accuracy | Accuracy of the direct home/draw/away classifier. | Higher is better | Measures the high-signal outcome model independent of exact scoreline. |
 | Blended outcome accuracy | Accuracy after reconciling scoreline and outcome probabilities. | Higher is better | Best summary metric for whether the final predicted score produces the right outcome. |
 | Reconciled exact score accuracy | Exact scoreline accuracy after calibration. | Higher is better | Useful for the competition, but volatile and naturally lower than outcome accuracy. |
@@ -30,6 +30,7 @@ The hosted dashboard reads CSV snapshots from `app/data/`. These are treated as 
 | `dashboard_model_metrics.csv` | One row per model metric | Five tracked metrics with target, guardrail, stretch, and status. |
 | `dashboard_data_quality.csv` | One row per validation check | Submission validity and row-count checks for group, knockout, and combined predictions. |
 | `dashboard_historical_competition_summary.csv` | One row per historical tournament-year | Training-data context for scoring environment and coverage. |
+| `dashboard_tournament_simulation.csv` | One row per World Cup team | 48 teams, one row per team, advancement probabilities between 0 and 1, and title probabilities summing to 1. |
 
 ## dbt Model Contracts
 

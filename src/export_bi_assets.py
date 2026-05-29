@@ -12,6 +12,7 @@ from world_cup.paths import (
     DUCKDB_PATH,
     MODEL_METRICS_V2_PATH,
     MODEL_TEAM_FEATURES_V2_PATH,
+    MODEL_TOURNAMENT_SIMULATION_V2_PATH,
     SUBMISSION_GROUP_PREDICTIONS_PATH,
     SUBMISSION_KNOCKOUT_PREDICTIONS_PATH,
     SUBMISSION_VALIDATION_PATH,
@@ -254,6 +255,7 @@ def export_bi_assets() -> list[Path]:
             DUCKDB_PATH,
             MODEL_METRICS_V2_PATH,
             MODEL_TEAM_FEATURES_V2_PATH,
+            MODEL_TOURNAMENT_SIMULATION_V2_PATH,
             SUBMISSION_GROUP_PREDICTIONS_PATH,
             SUBMISSION_KNOCKOUT_PREDICTIONS_PATH,
             SUBMISSION_VALIDATION_PATH,
@@ -265,6 +267,7 @@ def export_bi_assets() -> list[Path]:
     knockout_predictions = pd.read_csv(SUBMISSION_KNOCKOUT_PREDICTIONS_PATH)
     metrics = json.loads(MODEL_METRICS_V2_PATH.read_text(encoding="utf-8"))
     model_team_features = pd.read_csv(MODEL_TEAM_FEATURES_V2_PATH)
+    tournament_simulation = pd.read_csv(MODEL_TOURNAMENT_SIMULATION_V2_PATH)
     validation = json.loads(SUBMISSION_VALIDATION_PATH.read_text(encoding="utf-8"))
 
     exports = {
@@ -277,6 +280,7 @@ def export_bi_assets() -> list[Path]:
         ),
         "dashboard_model_metrics.csv": _flatten_metric_targets(metrics),
         "dashboard_data_quality.csv": _build_dashboard_data_quality(validation),
+        "dashboard_tournament_simulation.csv": tournament_simulation,
     }
     for output_name, table_name in BI_TABLES.items():
         exports[output_name] = _load_dbt_table(table_name)

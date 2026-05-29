@@ -15,6 +15,7 @@ EXPECTED_FILES = {
     "dashboard_match_predictions.csv",
     "dashboard_model_metrics.csv",
     "dashboard_team_profiles.csv",
+    "dashboard_tournament_simulation.csv",
 }
 
 
@@ -126,6 +127,29 @@ def test_dashboard_metrics_contract() -> None:
     assert validation.tolist() == [1]
 
 
+def test_dashboard_tournament_simulation_contract() -> None:
+    simulation = _read_dashboard_csv("dashboard_tournament_simulation.csv")
+
+    required_columns = {
+        "team_name",
+        "simulations",
+        "avg_group_points",
+        "group_winner_probability",
+        "round_of_32_probability",
+        "round_of_16_probability",
+        "quarter_final_probability",
+        "semi_final_probability",
+        "final_probability",
+        "champion_probability",
+    }
+    assert required_columns.issubset(simulation.columns)
+    assert len(simulation) == 48
+    assert simulation["team_name"].is_unique
+    assert simulation["champion_probability"].between(0, 1).all()
+    assert simulation["round_of_32_probability"].between(0, 1).all()
+    assert abs(simulation["champion_probability"].sum() - 1.0) < 0.001
+
+
 def test_streamlit_table_helper_omits_none_height() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
@@ -144,6 +168,8 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "Historical Goal Environment" in source
     assert "features_historical_match_training" in source
     assert "Training Data and Signal Weighting" in source
+    assert "Championship Probability Layer" in source
+    assert "Repeated simulations estimate title probabilities" in source
     assert "Learned model features do not have fixed dashboard weights" in source
     assert "Player-quality aggregates" in source
     assert "Capped overlay" in source
