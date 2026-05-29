@@ -113,6 +113,36 @@ models:
         tests:
           - not_null
 
+  - name: int_transfermarkt_top_league_player_form
+    description: Player-level top-league form since the 2022 World Cup, using Transfermarkt appearances, market values, and league-difficulty weights.
+    columns:
+      - name: player_id
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        tests:
+          - not_null
+      - name: player_star_power_index
+        tests:
+          - not_null
+
+  - name: int_world_cup_squad_player_power
+    description: World Cup squad players matched to Transfermarkt top-league form and scored with the player star-power proxy.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+      - name: player_name
+        tests:
+          - not_null
+      - name: team_player_power_rank
+        tests:
+          - not_null
+      - name: player_star_power_index
+        tests:
+          - not_null
+
   - name: int_historical_match_rankings
     description: Point-in-time FIFA rankings joined to each historical match before kickoff.
     columns:

@@ -94,7 +94,7 @@ match_id,competition_phase,group,round,multiplier,date_utc,venue,slot_home,slot_
 93,knockout,,Round of 16,2.0,2026-07-06T19:00:00Z,"AT&T Stadium, Dallas",Winner Match 83,Winner Match 84,Colombia,Spain,Colombia,Spain,1,1,9,4,0,away,True,1-1,2,4,Spain,True
 94,knockout,,Round of 16,2.0,2026-07-07T00:00:00Z,"Lumen Field, Seattle",Winner Match 81,Winner Match 82,Belgium,USA,Belgium,USA,1,0,10,4,0,home,False,1-0,1,4,Belgium,False
 95,knockout,,Round of 16,2.0,2026-07-07T16:00:00Z,"Mercedes-Benz Stadium, Atlanta",Winner Match 86,Winner Match 88,Turkiye,Portugal,Turkiye,Portugal,1,1,10,4,0,away,True,1-1,2,4,Portugal,True
-96,knockout,,Round of 16,2.0,2026-07-07T20:00:00Z,"BC Place, Vancouver",Winner Match 85,Winner Match 87,Switzerland,Argentina,Switzerland,Argentina,0,2,8,4,0,away,False,0-2,2,4,Argentina,False
+96,knockout,,Round of 16,2.0,2026-07-07T20:00:00Z,"BC Place, Vancouver",Winner Match 85,Winner Match 87,Switzerland,Argentina,Switzerland,Argentina,1,1,8,4,0,away,True,1-1,2,4,Argentina,True
 97,knockout,,Quarter-final,4.0,2026-07-09T20:00:00Z,"Gillette Stadium, Boston",Winner Match 89,Winner Match 90,Germany,Brazil,Germany,Brazil,1,1,10,4,0,away,True,1-1,2,4,Brazil,True
 98,knockout,,Quarter-final,4.0,2026-07-10T19:00:00Z,"SoFi Stadium, Los Angeles",Winner Match 93,Winner Match 94,Spain,Belgium,Spain,Belgium,2,1,10,4,0,home,False,2-1,3,4,Spain,False
 99,knockout,,Quarter-final,4.0,2026-07-11T21:00:00Z,"Hard Rock Stadium, Miami",Winner Match 91,Winner Match 92,Netherlands,England,Netherlands,England,1,1,9,4,0,away,True,1-1,2,4,England,True

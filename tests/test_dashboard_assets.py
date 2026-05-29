@@ -121,12 +121,13 @@ def test_dashboard_player_power_contract() -> None:
         "caps",
         "international_goals",
         "squad_club",
-        "club_minutes",
-        "club_goals",
-        "club_assists",
-        "club_yellow_cards",
-        "club_red_cards",
-        "has_club_player_stats",
+        "current_top_league_name",
+        "market_value_in_eur",
+        "top_league_minutes",
+        "league_weighted_goal_contribution_per90",
+        "top_league_goals",
+        "top_league_assists",
+        "has_top_league_form",
         "player_star_power_index",
     }
     assert required_columns.issubset(players.columns)
@@ -230,6 +231,7 @@ def test_methodology_includes_source_links() -> None:
     assert "https://api.fifa.com/api/v3/rankings?gender=1&count=250&language=en" in source
     assert "https://github.com/Dato-Futbol/fifa-ranking" in source
     assert "https://www.kaggle.com/datasets/lchikry/international-football-match-features-and-statistics" in source
+    assert "https://www.kaggle.com/datasets/davidcariboo/player-scores" in source
     assert "https://footystats.org/download-stats-csv" in source
     assert "https://footystats.org/england/premier-league/datasets" in source
     assert "https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026" in source

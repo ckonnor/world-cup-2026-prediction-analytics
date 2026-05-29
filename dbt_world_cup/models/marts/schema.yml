@@ -153,3 +153,20 @@ models:
       - name: attacking_star_power_index
         tests:
           - not_null
+
+  - name: mart_top_league_player_strength
+    description: Team-level player star-power aggregate built from matched World Cup squad players and Transfermarkt top-league form since the 2022 World Cup.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+          - unique
+      - name: player_star_power_index
+        tests:
+          - not_null
+      - name: superstar_gap
+        tests:
+          - not_null
+      - name: attacking_star_power_index
+        tests:
+          - not_null

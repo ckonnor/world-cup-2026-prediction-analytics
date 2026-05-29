@@ -222,6 +222,51 @@ models:
         tests:
           - not_null
 
+  - name: stg_transfermarkt_appearances
+    description: Transfermarkt player appearance rows from the Kaggle player-scores dataset.
+    columns:
+      - name: appearance_id
+        tests:
+          - not_null
+          - unique
+      - name: player_id
+        tests:
+          - not_null
+      - name: competition_id
+        tests:
+          - not_null
+      - name: appearance_date
+        tests:
+          - not_null
+      - name: minutes_played
+        tests:
+          - not_null
+
+  - name: stg_transfermarkt_competitions
+    description: Transfermarkt competition metadata used to identify covered top leagues.
+    columns:
+      - name: competition_id
+        tests:
+          - not_null
+          - unique
+      - name: competition_name
+        tests:
+          - not_null
+
+  - name: stg_transfermarkt_players
+    description: Transfermarkt player profiles with citizenship, current club, market value, and national-team totals.
+    columns:
+      - name: player_id
+        tests:
+          - not_null
+          - unique
+      - name: player_name
+        tests:
+          - not_null
+      - name: player_name_key
+        tests:
+          - not_null
+
   - name: stg_fifa_rankings
     description: Historical and current FIFA men's world rankings normalized to one row per team per ranking date.
     columns:

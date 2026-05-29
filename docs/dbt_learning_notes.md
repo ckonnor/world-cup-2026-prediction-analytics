@@ -27,6 +27,9 @@ Files:
 - `dbt_world_cup/models/staging/stg_world_cup_squads.sql`
 - `dbt_world_cup/models/staging/stg_footystats_match_stats.sql`
 - `dbt_world_cup/models/staging/stg_club_player_stats.sql`
+- `dbt_world_cup/models/staging/stg_transfermarkt_appearances.sql`
+- `dbt_world_cup/models/staging/stg_transfermarkt_competitions.sql`
+- `dbt_world_cup/models/staging/stg_transfermarkt_players.sql`
 - `dbt_world_cup/models/staging/stg_fifa_rankings.sql`
 - `dbt_world_cup/models/staging/stg_international_match_features.sql`
 - `dbt_world_cup/models/staging/stg_international_player_aggregates.sql`
@@ -42,6 +45,8 @@ The historical results staging model also shows a common real-world cleanup: the
 `stg_world_cup_squads` stages the downloaded squad player rows. It casts ages, caps, goals, shirt numbers, and timestamps into usable types and keeps one row per player. This is another common staging pattern: keep the source grain intact first, then aggregate later.
 
 `stg_footystats_match_stats` and `stg_club_player_stats` stage the new event sources. The match stats keep one row per match with team corners/cards. The club player stats keep one row per player-season with minutes, yellow cards, red cards, fouls, and a normalized player key used for matching.
+
+The Transfermarkt staging models preserve the player-scores source at its natural grains: one row per appearance, one row per competition, and one row per player profile. This gives dbt enough structure to build a cleaner star-power proxy from recent per-90 production instead of career totals.
 
 `stg_fifa_rankings` keeps one row per team per ranking date. It is a good staging example because it combines historical and current ranking sources into one consistent schema before any modeling joins happen.
 
@@ -60,6 +65,8 @@ File:
 - `dbt_world_cup/models/intermediate/int_team_form_rolling.sql`
 - `dbt_world_cup/models/intermediate/int_footystats_team_match_events.sql`
 - `dbt_world_cup/models/intermediate/int_squad_player_discipline.sql`
+- `dbt_world_cup/models/intermediate/int_transfermarkt_top_league_player_form.sql`
+- `dbt_world_cup/models/intermediate/int_world_cup_squad_player_power.sql`
 - `dbt_world_cup/models/intermediate/int_historical_match_rankings.sql`
 
 Intermediate models express business logic that is reusable but not necessarily final reporting output. This model unions group fixtures and knockout slots into one 104-match schedule.
@@ -71,6 +78,8 @@ Intermediate models express business logic that is reusable but not necessarily 
 `int_footystats_team_match_events` reshapes each event match into two rows, one from each team's point of view. This mirrors `int_historical_team_match_results` and gives us `corners_for`, `corners_against`, `yellow_cards_for`, and related fields.
 
 `int_squad_player_discipline` joins squad players to club player stats by normalized player name and country code. This is intentionally an intermediate model because it is reusable evidence, not yet the final team-level answer.
+
+`int_transfermarkt_top_league_player_form` scores players from post-2022-World-Cup appearances in covered top leagues. It weights production by league difficulty, emphasizes goal contribution per 90, shrinks small samples, and blends current/peak market value as quality priors. `int_world_cup_squad_player_power` then matches those player scores back to World Cup squad rows.
 
 `int_historical_match_rankings` is a point-in-time join. For each historical match, it finds the latest FIFA ranking published before the match date for both teams. This is important because using future rankings would leak information from after the match.
 
@@ -85,6 +94,7 @@ Files:
 - `dbt_world_cup/models/marts/mart_team_event_profile.sql`
 - `dbt_world_cup/models/marts/mart_latest_fifa_rankings.sql`
 - `dbt_world_cup/models/marts/mart_external_player_strength.sql`
+- `dbt_world_cup/models/marts/mart_top_league_player_strength.sql`
 
 Mart models are analyst-facing tables. `dim_teams` is a dimension table with one row per team. `fct_fixture_schedule` is a fact-style table with one row per match slot.
 
@@ -97,6 +107,8 @@ Mart models are analyst-facing tables. `dim_teams` is a dimension table with one
 `mart_latest_fifa_rankings` publishes the newest ranking snapshot per team. Python uses it when scoring 2026 fixtures and knockout matchups that are resolved dynamically.
 
 `mart_external_player_strength` publishes the newest external player aggregate row per team. It also derives dashboard-ready star-power fields from max overall, average overall, attack, shooting, passing, and pace. Python uses those current player-strength proxies for the direct outcome model.
+
+`mart_top_league_player_strength` rolls the player-level star-power scores up to team level. Where enough squad-player matches exist, `mart_external_player_strength` uses this newer top-league roster signal for current 2026 star power while keeping the older country aggregate fields as fallback context.
 
 ### Features
 

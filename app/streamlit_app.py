@@ -234,11 +234,15 @@ DATA_SOURCE_LINKS = [
     (
         "External player features",
         "Kaggle",
-        "Historical match-feature data and EA/FIFA-style country player aggregates used by the direct outcome model.",
+        "Historical match-feature data, EA/FIFA-style country aggregates, and Transfermarkt-style player form used by the direct outcome model and roster views.",
         [
             (
                 "Match and player features",
                 "https://www.kaggle.com/datasets/lchikry/international-football-match-features-and-statistics",
+            ),
+            (
+                "Transfermarkt player scores",
+                "https://www.kaggle.com/datasets/davidcariboo/player-scores",
             ),
         ],
     ),
@@ -2176,12 +2180,13 @@ def render_team_lens(
                     "caps",
                     "international_goals",
                     "squad_club",
-                    "club_minutes",
-                    "club_goals",
-                    "club_assists",
-                    "club_yellow_cards",
-                    "club_red_cards",
-                    "has_club_player_stats",
+                    "current_top_league_name",
+                    "market_value_in_eur",
+                    "top_league_minutes",
+                    "league_weighted_goal_contribution_per90",
+                    "top_league_goals",
+                    "top_league_assists",
+                    "has_top_league_form",
                 ],
                 {
                     "team_player_power_rank": "Rank",
@@ -2192,30 +2197,34 @@ def render_team_lens(
                     "caps": "Caps",
                     "international_goals": "Intl Goals",
                     "squad_club": "Club",
-                    "club_minutes": "Club Min",
-                    "club_goals": "Club G",
-                    "club_assists": "Club A",
-                    "club_yellow_cards": "Yellows",
-                    "club_red_cards": "Reds",
-                    "has_club_player_stats": "Club Match",
+                    "current_top_league_name": "Top League",
+                    "market_value_in_eur": "Market EUR",
+                    "top_league_minutes": "Top Min",
+                    "league_weighted_goal_contribution_per90": "Adj G+A/90",
+                    "top_league_goals": "Top G",
+                    "top_league_assists": "Top A",
+                    "has_top_league_form": "Top Form",
                 },
                 460,
                 {
                     "team_player_power_rank": "Ranking within the selected roster by the dashboard player power proxy.",
                     "caps": "Senior international appearances in the current squad source.",
                     "international_goals": "Senior international goals in the current squad source.",
-                    "club_minutes": "Matched 2025/26 club minutes from the player stats source. Missing matches are shown as zero.",
-                    "club_goals": "Matched 2025/26 club goals from the player stats source.",
-                    "club_assists": "Matched 2025/26 club assists from the player stats source.",
-                    "club_yellow_cards": "Matched 2025/26 club yellow cards from the player stats source.",
-                    "club_red_cards": "Matched 2025/26 club red cards from the player stats source.",
-                    "player_star_power_index": "A dashboard proxy for individual player power. It blends caps, international goals, club minutes, club starts, club goals and assists, defensive actions, and a small captain boost. It is not an official FIFA player rating.",
-                    "has_club_player_stats": "Whether the squad player matched the 2025/26 club player stats source by normalized name and country code.",
+                    "current_top_league_name": "The player's current league when it is one of the covered top leagues.",
+                    "market_value_in_eur": "Current Transfermarkt market value. It acts as a quality prior when recent top-league match data is incomplete.",
+                    "top_league_minutes": "Minutes played since the 2022 World Cup in the covered top leagues.",
+                    "league_weighted_goal_contribution_per90": "Recent goals plus 0.75 assists per 90, weighted by league difficulty. This rewards production rate more than career totals.",
+                    "top_league_goals": "Goals in covered top leagues since the 2022 World Cup.",
+                    "top_league_assists": "Assists in covered top leagues since the 2022 World Cup.",
+                    "player_star_power_index": "A dashboard proxy for individual player star power. It blends league-adjusted recent production per 90, current market value, peak market value, reliable international goal rate, and a small top-league minutes signal. It is not an official FIFA player rating.",
+                    "has_top_league_form": "Whether the player has recent appearance data in one of the covered top leagues.",
                 },
             )
             st.caption(
                 "Player Star Power is a portfolio-facing proxy, not an official player rating. "
-                "It helps identify which players carry the most current roster signal inside the public data we have."
+                "The covered top leagues are Premier League, Serie A, LaLiga, Ligue 1, Bundesliga, "
+                "Belgium Pro League, Liga Portugal, Brazil Serie A, and MLS. The source does not "
+                "currently include EFL Championship appearances."
             )
         return
 

@@ -65,6 +65,8 @@ The pipeline now trains a separate direct outcome model for `home`, `draw`, and 
 
 The star-power feature was only promoted after an A/B pass. Adding the three summary differentials lifted holdout direct outcome accuracy from about `62.4%` to `62.8%`, blended scoreline outcome accuracy from about `62.4%` to `62.6%`, and exact score accuracy from about `14.7%` to `14.9%`. Larger star-power bundles were not used because they became redundant with the existing raw player aggregate fields.
 
+For current 2026 scoring, dbt now replaces the older country-level star proxy with a roster-level top-league player signal where the squad can be matched. This signal uses post-2022-World-Cup appearances in covered top leagues, league-adjusted goal contribution per 90, sample reliability, current market value, peak market value, and reliable international goal rate. This changed the current prediction set slightly without changing the historical holdout metrics, because the historical training fold still uses the original point-in-time external match-feature source.
+
 The external match-feature source includes context flags such as `is_neutral`, but those flags behaved like fixture-order leakage for neutral tournament matches. The outcome model therefore uses the external strength and form fields, but excludes those external context flags. Model selection and calibration use a 2018-2021 tournament-focused validation slice made from World Cups, continental championships, Nations League-style competitions, and their qualifiers. The direct outcome draw threshold and the blended scoreline weight both use a minimum predicted draw-rate guardrail, which sacrifices a small amount of pure accuracy to avoid unrealistic no-draw tournament forecasts.
 
 Group standings use standard points, goal difference, and goals-for ordering. If teams remain tied after those fields, the prediction pipeline uses model tiebreak strength instead of alphabetical order. This is a proxy for official fair-play or drawing-lots tiebreakers that are not knowable before the tournament.
@@ -139,7 +141,7 @@ data/processed/model_metrics_v2.json
 - Club player discipline coverage is strongest for countries with many players in the Premier League, La Liga, Bundesliga, Serie A, and Ligue 1.
 - Corners are still team-level, not player-level, because the competition asks for total match corners and player corner attribution is much less useful for this target.
 - FIFA rankings start in 1992, so the ranking-enhanced training set excludes older historical matches.
-- External player aggregate ratings are a proxy from the Kaggle match-feature dataset, not official current squad ratings.
+- External player aggregate ratings are a proxy from the Kaggle match-feature dataset, not official current squad ratings. Current squad star power is now improved with a Transfermarkt-style top-league roster signal, but that source still lacks EFL Championship appearances.
 - The calibrated scoreline blend still underpredicts draws relative to the historical holdout distribution, but it no longer collapses the tournament forecast into almost all home wins.
 - International pedigree comes from currently published squad tables, so coverage is partial until all teams announce squads.
 - Knockout scores use the same goal model, then resolve tied rounded scorelines as penalty matches.

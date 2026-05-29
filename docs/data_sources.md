@@ -129,16 +129,21 @@ Source pages:
 - FootyStats CSV downloads: `https://footystats.org/download-stats-csv`
 - FootyStats Premier League dataset example: `https://footystats.org/england/premier-league/datasets`
 - Kaggle player stats dataset: `https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026`
+- Transfermarkt-style player scores dataset: `https://www.kaggle.com/datasets/davidcariboo/player-scores`
 
 Downloaded files:
 
 - `data/raw/external/footystats_match_stats.csv`
 - `data/raw/external/club_player_stats_2025_2026.csv`
+- `data/raw/external/transfermarkt_appearances.csv`
+- `data/raw/external/transfermarkt_competitions.csv`
+- `data/raw/external/transfermarkt_players.csv`
 
 Run:
 
 ```powershell
 python src/download_event_data.py
+python src/download_transfermarkt_data.py
 ```
 
 How the data is used:
@@ -146,11 +151,13 @@ How the data is used:
 - FootyStats match CSVs provide team-level corners, yellow cards, and red cards for 2026 World Cup qualifying plus recent World Cups.
 - The KaggleHub player file provides 2025/26 top-five-European-league player cards, fouls, minutes, and clubs. dbt joins these rows to the World Cup squad table by normalized player name plus country code.
 - `main_marts.mart_team_event_profile` blends international team rates with club player discipline coverage. Corners stay team-level; card risk uses player-level club data when matched squad players are available.
+- The Transfermarkt-style player scores dataset provides player appearances, current market value, peak market value, citizenship, club, and competition metadata. dbt uses it to create a top-league player star-power proxy from post-2022-World-Cup production per 90, league difficulty, and market-value quality priors.
 
 Important source-data notes:
 
 - Current FootyStats club player CSVs redirect to Premium, so the free automated pipeline uses KaggleHub for current club player discipline.
 - Top-five-league player data helps with star-card-risk for elite squads but has weaker coverage for teams whose players are mostly outside those leagues.
+- The Transfermarkt-style source covers 9 of the 10 top leagues used for star-power weighting: Premier League, Serie A, LaLiga, Ligue 1, Bundesliga, Belgium Pro League, Liga Portugal, Brazil Serie A, and MLS. The source does not expose EFL Championship appearances.
 - Red cards are rare, so the current model remains conservative and predicts zero red cards unless the blended expected rate becomes very high.
 
 ## Fixture Team Resolution
