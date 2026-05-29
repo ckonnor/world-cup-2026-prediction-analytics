@@ -1159,6 +1159,24 @@ def padded_axis_range(frame: pd.DataFrame, column: str, padding: float = 5.0) ->
     return [low, high]
 
 
+def axis_focus_frame(
+    frame: pd.DataFrame,
+    weight_column: str = "champion_probability_pct",
+    minimum_weight: float = 0.5,
+    minimum_rows: int = 8,
+) -> pd.DataFrame:
+    if weight_column not in frame.columns:
+        return frame
+    weights = pd.to_numeric(frame[weight_column], errors="coerce").fillna(0.0)
+    meaningful = frame.loc[weights >= minimum_weight]
+    if len(meaningful) >= minimum_rows:
+        return meaningful
+    nonzero = frame.loc[weights > 0.0]
+    if len(nonzero) >= minimum_rows:
+        return nonzero
+    return frame
+
+
 def team_group(teams: pd.DataFrame, team: str) -> str | None:
     if team == "All teams":
         return None
@@ -2046,8 +2064,9 @@ def render_team_lens(
                 size_max=24,
             )
             fig = polish_figure(fig, 430)
-            fig.update_xaxes(range=padded_axis_range(field, "route_difficulty_index"))
-            fig.update_yaxes(range=padded_axis_range(field, "dashboard_strength_index"))
+            axis_frame = axis_focus_frame(field)
+            fig.update_xaxes(range=padded_axis_range(axis_frame, "route_difficulty_index"))
+            fig.update_yaxes(range=padded_axis_range(axis_frame, "dashboard_strength_index"))
             st.plotly_chart(
                 fig,
                 use_container_width=True,

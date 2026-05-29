@@ -203,10 +203,28 @@ def test_streamlit_table_helper_omits_none_height() -> None:
 def test_team_comparison_scatter_uses_dynamic_axis_ranges() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
-    assert 'padded_axis_range(field, "route_difficulty_index")' in source
-    assert 'padded_axis_range(field, "dashboard_strength_index")' in source
+    assert "axis_frame = axis_focus_frame(field)" in source
+    assert 'padded_axis_range(axis_frame, "route_difficulty_index")' in source
+    assert 'padded_axis_range(axis_frame, "dashboard_strength_index")' in source
     assert "fig.update_xaxes(range=[30, 70])" not in source
     assert "fig.update_yaxes(range=[40, 100])" not in source
+
+
+def test_scatter_axis_focus_ignores_tiny_probability_outliers() -> None:
+    streamlit_app = _load_streamlit_app_module()
+    sample = pd.DataFrame(
+        {
+            "route_difficulty_index": [0.0, 50.0, 70.0, 100.0],
+            "dashboard_strength_index": [20.0, 60.0, 80.0, 30.0],
+            "champion_probability_pct": [0.0, 1.0, 2.0, 0.0],
+        }
+    )
+
+    focused = streamlit_app.axis_focus_frame(sample, minimum_weight=0.5, minimum_rows=2)
+
+    assert focused["route_difficulty_index"].tolist() == [50.0, 70.0]
+    assert streamlit_app.padded_axis_range(focused, "route_difficulty_index") == [45.0, 75.0]
+    assert streamlit_app.padded_axis_range(focused, "dashboard_strength_index") == [55.0, 85.0]
 
 
 def test_dashboard_includes_portfolio_case_study_story() -> None:
