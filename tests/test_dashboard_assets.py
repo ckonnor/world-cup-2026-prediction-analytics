@@ -133,6 +133,7 @@ def test_team_profile_table_explains_model_columns() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
     assert "st.column_config.Column(help=help_text)" in source
+    assert "available_columns(" in source
     assert "Current team Elo after historical international results" in source
     assert "Latest FIFA ranking points" in source
     assert "Average points above or below Elo expectation" in source

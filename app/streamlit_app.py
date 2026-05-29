@@ -711,6 +711,8 @@ def normalize_series(series: pd.Series) -> pd.Series:
 
 def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
     enriched = teams.copy()
+    if "confederation" not in enriched.columns:
+        enriched["confederation"] = "Unknown"
     if "current_elo" not in enriched.columns:
         enriched["current_elo"] = 1500.0
     if "last_10_adjusted_points_per_match" not in enriched.columns:
@@ -730,6 +732,10 @@ def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
         + 0.10 * adjusted_form_score
     ).round(1)
     return enriched
+
+
+def available_columns(frame: pd.DataFrame, columns: list[str]) -> list[str]:
+    return [column for column in columns if column in frame.columns]
 
 
 def metric_value(metrics: pd.DataFrame, metric_name: str) -> float:
@@ -1383,12 +1389,15 @@ def render_executive_view(
             labels={"dashboard_strength_index": "Strength index", "team_name": ""},
             color="confederation",
             color_discrete_sequence=px.colors.qualitative.Set2,
-            hover_data=[
-                "fifa_rank",
-                "current_elo",
-                "last_10_adjusted_points_per_match",
-                "overall_star_power_z",
-            ],
+            hover_data=available_columns(
+                contenders,
+                [
+                    "fifa_rank",
+                    "current_elo",
+                    "last_10_adjusted_points_per_match",
+                    "overall_star_power_z",
+                ],
+            ),
         )
         fig = polish_figure(fig, 360)
         st.plotly_chart(
