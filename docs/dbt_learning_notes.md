@@ -90,7 +90,7 @@ Mart models are analyst-facing tables. `dim_teams` is a dimension table with one
 
 `mart_team_strength` summarizes each team's recent international form as of the tournament start date. This is the first table that can feed a real prediction model.
 
-`mart_squad_strength` summarizes current squad rows into team-level features: squad size, position counts, total caps, total goals, attacking goals, defensive caps, top-five caps, top-five goals, and standardized star-power scores. This is where dbt changes player-grain data into model-grain data.
+`mart_squad_strength` summarizes current squad rows into team-level features: squad size, position counts, total caps, total goals, attacking goals, defensive caps, top-five caps, top-five goals, and standardized international-pedigree scores. This is where dbt changes player-grain data into model-grain data.
 
 `mart_team_event_profile` summarizes corners and cards into one row per World Cup team. It uses weighted international match-event rates for corners and blends international cards with matched club player discipline for yellow/red card risk.
 

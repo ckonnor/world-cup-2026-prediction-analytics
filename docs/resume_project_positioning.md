@@ -11,7 +11,7 @@ Built a reproducible FIFA World Cup 2026 forecasting warehouse using Python, Duc
 - Analytics engineering: layered dbt project with staging, intermediate, marts, features, and BI models.
 - Data modeling: fact/dimension-style schedule and team profile tables.
 - Data quality: dbt tests for row counts, uniqueness, accepted values, placeholder resolution, feature coverage, and leakage prevention.
-- Feature engineering: point-in-time rolling form, FIFA ranking joins, squad star power, event profiles, and player-strength proxies.
+- Feature engineering: point-in-time rolling form, FIFA ranking joins, international pedigree, event profiles, and player-strength proxies.
 - Python orchestration: model training, calibration, tournament simulation, knockout bracket resolution, and export validation.
 - BI readiness: dashboard-specific marts and CSV extracts for Looker Studio or another visualization tool.
 

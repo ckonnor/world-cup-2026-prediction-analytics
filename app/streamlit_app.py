@@ -78,7 +78,7 @@ PIPELINE_STEPS = [
     (
         "3",
         "dbt marts",
-        "Publish team strength, latest rankings, squad strength, event profiles, and fixture tables.",
+        "Publish team strength, latest rankings, international pedigree, event profiles, and fixture tables.",
     ),
     (
         "4",
@@ -103,7 +103,7 @@ MODEL_LAYERS = [
     ),
     (
         "Direct outcome",
-        "A classifier estimates home, draw, and away probabilities with stronger player aggregate signals.",
+        "A classifier estimates home, draw, and away probabilities with stronger player-quality aggregate signals.",
     ),
     (
         "Reconciled scoreline",
@@ -740,13 +740,13 @@ def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
     fifa_points_score = normalize_series(enriched["fifa_points"])
     rank_score = 100 - normalize_series(enriched["fifa_rank"])
     elo_score = normalize_series(enriched["current_elo"])
-    star_score = normalize_series(enriched["overall_star_power_z"])
+    pedigree_score = normalize_series(enriched["overall_star_power_z"])
     adjusted_form_score = normalize_series(enriched["last_10_adjusted_points_per_match"])
     enriched["dashboard_strength_index"] = (
         0.30 * fifa_points_score
         + 0.24 * rank_score
         + 0.22 * elo_score
-        + 0.14 * star_score
+        + 0.14 * pedigree_score
         + 0.10 * adjusted_form_score
     ).round(1)
     return enriched
@@ -1059,7 +1059,7 @@ def team_signal_scores(teams: pd.DataFrame, team: str) -> pd.DataFrame:
         ("Elo rating", "current_elo", True),
         ("Adjusted form", "last_10_adjusted_points_per_match", True),
         ("Adjusted goal difference", "last_10_adjusted_goal_diff_per_match", True),
-        ("Squad star power", "overall_star_power_z", True),
+        ("Intl pedigree", "overall_star_power_z", True),
         ("Attack profile", "attacking_star_power_z", True),
     ]
     return pd.DataFrame(
@@ -1553,7 +1553,7 @@ def render_team_lens(
     if selected_team == "All teams":
         section_header(
             "Team Comparison",
-            "The field view compares ranking, Elo, opponent-adjusted form, squad signal, and the dashboard composite strength index.",
+            "The field view compares ranking, Elo, opponent-adjusted form, international pedigree, and the dashboard composite strength index.",
         )
         chart_cols = st.columns([1.05, 0.95])
         with chart_cols[0]:
@@ -1566,7 +1566,7 @@ def render_team_lens(
                 hover_name="team_name",
                 labels={
                     "fifa_points": "FIFA points",
-                    "overall_star_power_z": "Squad star power",
+                    "overall_star_power_z": "Intl pedigree",
                     "confederation": "Confederation",
                     "current_elo": "Elo",
                 },
@@ -1599,7 +1599,7 @@ def render_team_lens(
                     "current_elo": "Elo",
                     "dashboard_strength_index": "Strength",
                     "last_10_adjusted_points_per_match": "Adj Form",
-                    "overall_star_power_z": "Star",
+                    "overall_star_power_z": "Intl Pedigree",
                 },
                 430,
             )
@@ -1690,7 +1690,7 @@ def render_team_lens(
             "fifa_points": "FIFA Points",
             "last_10_adjusted_points_per_match": "Adj Form",
             "last_10_adjusted_goal_diff_per_match": "Adj GD",
-            "overall_star_power_z": "Star",
+            "overall_star_power_z": "Intl Pedigree",
             "attacking_star_power_z": "Attack",
             "avg_corners_for": "Corners For",
             "blended_yellow_cards_for": "Yellows",
@@ -1703,9 +1703,9 @@ def render_team_lens(
             "fifa_points": "Latest FIFA ranking points. Higher values indicate stronger recent official FIFA performance.",
             "last_10_adjusted_points_per_match": "Average points above or below Elo expectation across the team's ten most recent international matches.",
             "last_10_adjusted_goal_diff_per_match": "Average goal difference above or below an Elo-implied expectation across the team's ten most recent international matches.",
-            "overall_star_power_z": "Squad star-power z-score across the tournament field. Positive values are above field average.",
+            "overall_star_power_z": "International pedigree z-score from squad caps, goals, top-five caps, and top-five goals. Positive values are above field average.",
             "attacking_star_power_z": "Attacking squad-strength z-score, weighted toward goals and top attacking contributors.",
-            "dashboard_strength_index": "Dashboard composite index combining FIFA points, FIFA rank, recent form, and squad star power.",
+            "dashboard_strength_index": "Dashboard composite index combining FIFA points, FIFA rank, recent form, and international pedigree.",
             "profile_coverage_pct": "Share of the five expected team-profile inputs present: form, FIFA ranking, squad, event profile, and external player profile.",
         },
     )
@@ -1837,7 +1837,7 @@ def render_matches(
                 "last_10_points_per_match_diff": "Form Diff",
                 "fifa_rank_diff": "Rank Diff",
                 "fifa_points_diff": "FIFA Points Diff",
-                "overall_star_power_diff": "Star Diff",
+                "overall_star_power_diff": "Pedigree Diff",
                 "expected_total_corners": "Corners",
                 "expected_total_yellow_cards": "Yellows",
                 "expected_total_red_cards": "Reds",

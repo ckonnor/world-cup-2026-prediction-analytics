@@ -60,7 +60,7 @@ Important source-data notes:
 
 - This page changes as federations publish final or preliminary squads.
 - The downloader only captures teams that have an actual player table under their team heading. Teams that have not published squads yet are left out instead of borrowing the next team's table.
-- dbt aggregates the player rows into `main_marts.mart_squad_strength`, which the Python model uses as a conservative post-model star-power adjustment.
+- dbt aggregates the player rows into `main_marts.mart_squad_strength`, which the Python model uses as a conservative post-model international-pedigree adjustment.
 
 ## FIFA Men's World Rankings
 

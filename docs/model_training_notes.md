@@ -11,7 +11,7 @@ dbt is responsible for preparing clean, tested analytics tables:
 - `main_staging.stg_group_fixtures`: the 72 known group matches, with stale DataCamp playoff placeholders resolved.
 - `main_staging.stg_knockout_slots`: the 32 bracket slots.
 - `main_staging.stg_international_results`: historical results used by the Python Elo pass.
-- `main_marts.mart_squad_strength`: one row per team with current squad experience and star-power scores when a squad table has been published.
+- `main_marts.mart_squad_strength`: one row per team with current squad experience and international-pedigree scores when a squad table has been published.
 - `main_marts.mart_team_event_profile`: one row per team with corners and card-risk features.
 - `main_marts.mart_latest_fifa_rankings`: the latest FIFA ranking snapshot for 2026 scoring.
 - `main_staging.stg_international_match_features`: external historical match features with Elo, form, and player aggregate signals.
@@ -50,10 +50,10 @@ The model uses:
 
 Raw recent form is still visible in the dbt marts, but the trained goal and outcome models now use the Elo-adjusted version instead. Adjusted form is calculated as actual recent performance above or below the expected result implied by the opponent's pre-match Elo. This prevents a team from receiving the same form credit for beating weak opposition that it would receive for beating an elite opponent.
 
-After the trained model estimates expected goals, Python applies a small capped squad overlay for 2026 matches. This overlay compares each team's squad star-power z-scores:
+After the trained model estimates expected goals, Python applies a small capped squad overlay for 2026 matches. This overlay compares each team's international-pedigree z-scores:
 
-- overall squad star power
-- attacking star power from goals and top scorers
+- overall international pedigree
+- attacking production from goals and top scorers
 - defensive experience from goalkeeper and defender caps
 - total squad experience
 
@@ -134,6 +134,6 @@ data/processed/model_metrics_v2.json
 - FIFA rankings start in 1992, so the ranking-enhanced training set excludes older historical matches.
 - External player aggregate ratings are a proxy from the Kaggle match-feature dataset, not official current squad ratings.
 - The calibrated scoreline blend still underpredicts draws relative to the historical holdout distribution, but it no longer collapses the tournament forecast into almost all home wins.
-- Squad star power comes from currently published squad tables, so coverage is partial until all teams announce squads.
+- International pedigree comes from currently published squad tables, so coverage is partial until all teams announce squads.
 - Knockout scores use the same goal model, then resolve tied rounded scorelines as penalty matches.
 - This is a strong first modeling baseline, not a final betting-grade forecast.
