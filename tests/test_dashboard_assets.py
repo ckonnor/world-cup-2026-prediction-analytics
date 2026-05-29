@@ -200,6 +200,15 @@ def test_streamlit_table_helper_omits_none_height() -> None:
     assert "display_columns = available_columns(frame, columns)" in source
 
 
+def test_team_comparison_scatter_uses_dynamic_axis_ranges() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+
+    assert 'padded_axis_range(field, "route_difficulty_index")' in source
+    assert 'padded_axis_range(field, "dashboard_strength_index")' in source
+    assert "fig.update_xaxes(range=[30, 70])" not in source
+    assert "fig.update_yaxes(range=[40, 100])" not in source
+
+
 def test_dashboard_includes_portfolio_case_study_story() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 

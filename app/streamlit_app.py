@@ -1147,6 +1147,18 @@ def polish_figure(fig: go.Figure, height: int = 360) -> go.Figure:
     return fig
 
 
+def padded_axis_range(frame: pd.DataFrame, column: str, padding: float = 5.0) -> list[float]:
+    values = pd.to_numeric(frame[column], errors="coerce").dropna()
+    if values.empty:
+        return [0.0, 1.0]
+    low = float(values.min()) - padding
+    high = float(values.max()) + padding
+    if low == high:
+        low -= padding
+        high += padding
+    return [low, high]
+
+
 def team_group(teams: pd.DataFrame, team: str) -> str | None:
     if team == "All teams":
         return None
@@ -2034,8 +2046,8 @@ def render_team_lens(
                 size_max=24,
             )
             fig = polish_figure(fig, 430)
-            fig.update_xaxes(range=[30, 70])
-            fig.update_yaxes(range=[40, 100])
+            fig.update_xaxes(range=padded_axis_range(field, "route_difficulty_index"))
+            fig.update_yaxes(range=padded_axis_range(field, "dashboard_strength_index"))
             st.plotly_chart(
                 fig,
                 use_container_width=True,
