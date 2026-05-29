@@ -34,7 +34,7 @@ data/bi_exports/
 | --- | --- | --- |
 | `dashboard_match_predictions.csv` | One row per match | Final group and knockout predictions for score, winner, corners, cards, and penalties |
 | `dashboard_group_standings.csv` | One row per team per group | Predicted group table with rank, points, goals, and goal difference |
-| `dashboard_team_profiles.csv` | One row per team | Team Elo, opponent-adjusted form, FIFA ranking, squad strength, event profile, and external player rating context |
+| `dashboard_team_profiles.csv` | One row per team | Team Elo, opponent-adjusted form, FIFA ranking, squad strength, event profile, external player rating context, and star-power index |
 | `dashboard_match_feature_context.csv` | One row per group match | Pre-match feature differences used to explain group-stage predictions |
 | `dashboard_model_metrics.csv` | One row per model metric | Guardrail, target, stretch, and current model performance |
 | `dashboard_data_quality.csv` | One row per validation check | Submission row counts and prediction distribution checks |

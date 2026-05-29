@@ -53,6 +53,44 @@ cleaned as (
         and try_cast(away_goals as integer) is not null
 ),
 
+with_player_strength_base as (
+    select
+        *,
+        0.30 * external_home_avg_overall
+            + 0.35 * external_home_max_overall
+            + 0.15 * external_home_avg_attack
+            + 0.10 * external_home_avg_shooting
+            + 0.05 * external_home_avg_passing
+            + 0.05 * external_home_avg_pace as external_home_star_power,
+        0.30 * external_away_avg_overall
+            + 0.35 * external_away_max_overall
+            + 0.15 * external_away_avg_attack
+            + 0.10 * external_away_avg_shooting
+            + 0.05 * external_away_avg_passing
+            + 0.05 * external_away_avg_pace as external_away_star_power,
+        external_home_max_overall - external_home_avg_overall as external_home_superstar_gap,
+        external_away_max_overall - external_away_avg_overall as external_away_superstar_gap,
+        0.40 * external_home_avg_attack
+            + 0.30 * external_home_avg_shooting
+            + 0.15 * external_home_avg_passing
+            + 0.15 * external_home_avg_pace as external_home_attacking_star_power,
+        0.40 * external_away_avg_attack
+            + 0.30 * external_away_avg_shooting
+            + 0.15 * external_away_avg_passing
+            + 0.15 * external_away_avg_pace as external_away_attacking_star_power
+    from cleaned
+),
+
+with_player_strength as (
+    select
+        *,
+        external_home_star_power - external_away_star_power as external_star_power_diff,
+        external_home_superstar_gap - external_away_superstar_gap as external_superstar_gap_diff,
+        external_home_attacking_star_power
+            - external_away_attacking_star_power as external_attacking_star_power_diff
+    from with_player_strength_base
+),
+
 deduped as (
     select
         *,
@@ -60,7 +98,7 @@ deduped as (
             partition by match_date, home_team, away_team, home_goals, away_goals
             order by tournament
         ) as match_feature_rank
-    from cleaned
+    from with_player_strength
 )
 
 select * exclude (match_feature_rank)

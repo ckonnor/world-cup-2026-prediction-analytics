@@ -87,6 +87,9 @@ EXTERNAL_OUTCOME_FEATURE_COLUMNS = [
     "external_overall_diff",
     "external_attack_diff",
     "external_defense_diff",
+    "external_star_power_diff",
+    "external_superstar_gap_diff",
+    "external_attacking_star_power_diff",
     "external_home_form_scored",
     "external_home_form_conceded",
     "external_home_form_win_rate",
@@ -1234,7 +1237,7 @@ def train_goal_models(
             "V2 adds pre-match Elo features computed from historical international results and point-in-time FIFA ranking features.",
             "Raw last-10 form and goal difference are replaced in the model by Elo opponent-adjusted rolling form features.",
             "The script compares Poisson regression and histogram gradient boosting with Poisson loss.",
-            "A direct outcome classifier chooses home/draw/away using dbt features plus external player aggregate match features.",
+            "A direct outcome classifier chooses home/draw/away using dbt features plus external player aggregate and star-power differential features.",
             "External match context flags are excluded from the outcome model because they behaved like fixture-order leakage for neutral tournament rows.",
             f"Draw threshold and scoreline blend selection use a 2018-2021 tournament-focused calibration slice with at least a {MIN_CALIBRATED_DRAW_RATE:.0%} predicted draw rate when such a setting is available.",
             "Final scorelines use a calibrated blend of independent Poisson score likelihood and direct outcome probabilities.",
@@ -1374,6 +1377,9 @@ def _external_player_strength_defaults(external_player_strength: pd.DataFrame) -
         "avg_pace",
         "avg_shooting",
         "avg_passing",
+        "player_star_power_index",
+        "superstar_gap",
+        "attacking_star_power_index",
     ]
     defaults = {}
     for metric_name in metric_names:
@@ -1592,6 +1598,42 @@ def _prepare_world_cup_match_features(
             external_player_lookup,
             external_player_defaults,
         ) if external_player_strength is not None else np.nan
+        home_external_star_power = _external_player_metric(
+            home_team,
+            "player_star_power_index",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        away_external_star_power = _external_player_metric(
+            away_team,
+            "player_star_power_index",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        home_external_superstar_gap = _external_player_metric(
+            home_team,
+            "superstar_gap",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        away_external_superstar_gap = _external_player_metric(
+            away_team,
+            "superstar_gap",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        home_external_attacking_star_power = _external_player_metric(
+            home_team,
+            "attacking_star_power_index",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
+        away_external_attacking_star_power = _external_player_metric(
+            away_team,
+            "attacking_star_power_index",
+            external_player_lookup,
+            external_player_defaults,
+        ) if external_player_strength is not None else np.nan
         home_last_10_matches = _team_metric(home_team, "last_10_matches", strength_lookup)
         away_last_10_matches = _team_metric(away_team, "last_10_matches", strength_lookup)
         home_last_10_wins = _team_metric(home_team, "last_10_wins", strength_lookup)
@@ -1691,6 +1733,12 @@ def _prepare_world_cup_match_features(
                 "external_overall_diff": home_external_overall - away_external_overall,
                 "external_attack_diff": home_external_attack - away_external_attack,
                 "external_defense_diff": home_external_defense - away_external_defense,
+                "external_star_power_diff": home_external_star_power
+                - away_external_star_power,
+                "external_superstar_gap_diff": home_external_superstar_gap
+                - away_external_superstar_gap,
+                "external_attacking_star_power_diff": home_external_attacking_star_power
+                - away_external_attacking_star_power,
                 "external_home_form_scored": home_goals_for,
                 "external_home_form_conceded": home_goals_against,
                 "external_home_form_win_rate": home_last_10_wins / max(home_last_10_matches, 1),
@@ -2617,9 +2665,9 @@ def main() -> None:
         ),
         "method": (
             "Outcome model receives historical external Elo, EA Sports/FIFA player "
-            "aggregate ratings, and form features where matched. Missing historical "
-            "features use training-set medians; 2026 scoring uses the latest player "
-            "aggregate snapshot."
+            "aggregate ratings, star-power differentials, and form features where "
+            "matched. Missing historical features use training-set medians; 2026 "
+            "scoring uses the latest player aggregate snapshot."
         ),
     }
     group_predictions = predict_world_cup_group_matches(

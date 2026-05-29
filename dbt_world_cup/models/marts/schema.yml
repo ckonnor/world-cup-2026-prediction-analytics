@@ -144,3 +144,12 @@ models:
       - name: max_overall
         tests:
           - not_null
+      - name: player_star_power_index
+        tests:
+          - not_null
+      - name: superstar_gap
+        tests:
+          - not_null
+      - name: attacking_star_power_index
+        tests:
+          - not_null

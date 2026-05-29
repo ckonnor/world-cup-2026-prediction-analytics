@@ -249,6 +249,20 @@ def _load_dbt_table(table_name: str) -> pd.DataFrame:
         return con.execute(f"select * from {table_name}").fetchdf()
 
 
+def _sort_export_frame(output_name: str, frame: pd.DataFrame) -> pd.DataFrame:
+    sort_keys = {
+        "dashboard_group_standings.csv": ["group_letter", "group_rank", "team_name"],
+        "dashboard_data_quality.csv": ["check_group", "check_name"],
+        "dashboard_team_profiles.csv": ["team_name"],
+        "dashboard_match_feature_context.csv": ["match_id"],
+        "dashboard_historical_competition_summary.csv": ["match_year", "tournament"],
+    }
+    columns = [column for column in sort_keys.get(output_name, []) if column in frame.columns]
+    if not columns:
+        return frame
+    return frame.sort_values(columns).reset_index(drop=True)
+
+
 def export_bi_assets() -> list[Path]:
     _require_files(
         [
@@ -293,7 +307,7 @@ def export_bi_assets() -> list[Path]:
     written_paths = []
     for output_name, frame in exports.items():
         output_path = BI_EXPORT_DIR / output_name
-        frame.to_csv(output_path, index=False)
+        _sort_export_frame(output_name, frame).to_csv(output_path, index=False)
         written_paths.append(output_path)
     return written_paths
 

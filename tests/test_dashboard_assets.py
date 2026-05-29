@@ -95,6 +95,9 @@ def test_dashboard_group_and_team_contracts() -> None:
         "current_elo",
         "last_10_adjusted_points_per_match",
         "last_10_adjusted_goal_diff_per_match",
+        "player_star_power_index",
+        "superstar_gap",
+        "attacking_star_power_index",
     }.issubset(teams.columns)
     assert teams["team_name"].is_unique
     assert standings[["group_letter", "team_name"]].drop_duplicates().shape[0] == 48
@@ -229,6 +232,8 @@ def test_team_profile_table_explains_model_columns() -> None:
     assert "Intl Pedigree" in source
     assert "How strong the team has performed over time" in source
     assert "Official FIFA ranking points" in source
+    assert "Player star power" in source
+    assert "How much elite player quality appears" in source
     assert "How much better or worse the team performed than expected" in source
     assert "How battle-tested this squad is at senior international level" in source
     assert "A dashboard-only composite view of team strength" in source
@@ -253,6 +258,7 @@ def test_team_profile_enrichment_supports_older_dashboard_exports() -> None:
         "last_10_adjusted_goal_diff_per_match",
         "overall_star_power_z",
         "attacking_star_power_z",
+        "player_star_power_index",
         "dashboard_strength_index",
         "profile_completeness_score",
     }
@@ -260,3 +266,11 @@ def test_team_profile_enrichment_supports_older_dashboard_exports() -> None:
     assert enriched.loc[0, "confederation"] == "Unknown"
     assert enriched.loc[0, "current_elo"] == 1500.0
     assert enriched.loc[0, "dashboard_strength_index"] == 50.0
+
+
+def test_group_filter_is_applied_to_team_views() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+
+    assert 'team_options = team_options[team_options["group_letter"] == selected_group]' in source
+    assert 'group_teams = group_teams[group_teams["group_letter"] == selected_group]' in source
+    assert "render_team_lens(teams, matches, selected_group, selected_team)" in source

@@ -44,7 +44,7 @@ The model has four prediction layers:
    - Poisson regression predicts home and away expected goals from Elo opponent-adjusted form, FIFA rankings, and Elo features.
 
 2. Direct outcome
-   - A histogram gradient boosting classifier predicts home/draw/away probabilities using dbt features plus external player aggregate and form signals.
+   - A histogram gradient boosting classifier predicts home/draw/away probabilities using dbt features plus external player aggregate, star-power differential, and form signals.
 
 3. Final scoreline
    - Python builds a Poisson score grid for plausible exact scores.

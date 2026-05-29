@@ -96,7 +96,7 @@ Mart models are analyst-facing tables. `dim_teams` is a dimension table with one
 
 `mart_latest_fifa_rankings` publishes the newest ranking snapshot per team. Python uses it when scoring 2026 fixtures and knockout matchups that are resolved dynamically.
 
-`mart_external_player_strength` publishes the newest external player aggregate row per team. Python uses it as a current player-strength proxy for the direct outcome model.
+`mart_external_player_strength` publishes the newest external player aggregate row per team. It also derives dashboard-ready star-power fields from max overall, average overall, attack, shooting, passing, and pace. Python uses those current player-strength proxies for the direct outcome model.
 
 ### Features
 
@@ -113,6 +113,8 @@ Feature models are model-ready outputs. The current feature model is intentional
 `features_world_cup_group_matches` is the scoring table for the 2026 group stage. It joins group fixtures to the latest team-strength snapshot using the model team names from staging. Because the playoff placeholders are resolved before this join, every group-stage fixture now has team-strength features.
 
 The same feature table also joins squad strength when a team has a published roster. `has_complete_squad_features` is useful when inspecting model inputs because some teams may not have squad data yet.
+
+The historical training table now also carries star-power differentials from `stg_international_match_features`. Those fields are intentionally produced in dbt so the model can consume named, inspectable columns instead of rebuilding the same player-quality logic inside Python.
 
 It now joins `mart_team_event_profile` too. The fields `expected_total_corners`, `expected_total_yellow_cards`, and `expected_total_red_cards` are the dbt-side event expectations that Python rounds into workbook predictions.
 

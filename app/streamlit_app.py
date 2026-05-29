@@ -165,7 +165,7 @@ TRAINING_SIGNAL_CARDS = [
     (
         "Player-quality aggregates",
         "Outcome model only",
-        "The external Kaggle match-feature dataset provides EA/FIFA-style country player aggregates such as average overall, max overall, attack, defense, pace, shooting, and passing. These go into the direct outcome classifier, not the expected-goals model.",
+        "The external Kaggle match-feature dataset provides EA/FIFA-style country player aggregates such as average overall, max overall, attack, defense, pace, shooting, and passing. The direct outcome classifier also uses star-power differentials built from those fields.",
     ),
     (
         "Intl pedigree",
@@ -919,6 +919,9 @@ def add_strength_index(teams: pd.DataFrame) -> pd.DataFrame:
         "last_10_adjusted_goal_diff_per_match": 0.0,
         "overall_star_power_z": 0.0,
         "attacking_star_power_z": 0.0,
+        "player_star_power_index": 0.0,
+        "superstar_gap": 0.0,
+        "attacking_star_power_index": 0.0,
         "avg_corners_for": 0.0,
         "blended_yellow_cards_for": 0.0,
         "profile_completeness_score": 0.0,
@@ -1279,9 +1282,11 @@ def team_signal_scores(teams: pd.DataFrame, team: str) -> pd.DataFrame:
         ("Elo rating", "current_elo", True),
         ("Adjusted form", "last_10_adjusted_points_per_match", True),
         ("Adjusted goal difference", "last_10_adjusted_goal_diff_per_match", True),
+        ("Player star power", "player_star_power_index", True),
         ("Intl pedigree", "overall_star_power_z", True),
         ("Attack profile", "attacking_star_power_z", True),
     ]
+    signals = [signal for signal in signals if signal[1] in teams.columns]
     return pd.DataFrame(
         {
             "Signal": label,
@@ -1322,23 +1327,27 @@ def render_sidebar(
     standings: pd.DataFrame,
 ) -> tuple[str, str]:
     groups = ["All groups", *sorted(standings["group_letter"].dropna().unique())]
-    team_names = ["All teams", *sorted(teams["team_name"].dropna().unique())]
 
     with st.sidebar:
         st.header("Focus")
+        selected_group = st.selectbox(
+            "Group",
+            groups,
+            help="Narrows group-stage standings, match context, and team comparison views.",
+        )
+        team_options = teams
+        if selected_group != "All groups":
+            team_options = team_options[team_options["group_letter"] == selected_group]
+        team_names = ["All teams", *sorted(team_options["team_name"].dropna().unique())]
         selected_team = st.selectbox(
             "Team",
             team_names,
             help="Highlights the team across bracket, group, team, and match views.",
         )
-        selected_group = st.selectbox(
-            "Group",
-            groups,
-            help="Narrows group-stage standings and match context.",
-        )
 
         if selected_team == "All teams":
-            top_team = teams.sort_values("dashboard_strength_index", ascending=False).iloc[0]
+            leader_pool = team_options if not team_options.empty else teams
+            top_team = leader_pool.sort_values("dashboard_strength_index", ascending=False).iloc[0]
             sidebar_card(
                 "Field leader",
                 top_team["team_name"],
@@ -1974,14 +1983,22 @@ def render_groups(
 def render_team_lens(
     teams: pd.DataFrame,
     matches: pd.DataFrame,
+    selected_group: str,
     selected_team: str,
 ) -> None:
+    group_teams = teams
+    if selected_group != "All groups":
+        group_teams = group_teams[group_teams["group_letter"] == selected_group]
+
     if selected_team == "All teams":
         section_header(
             "Team Comparison",
             "The field view compares each team's composite strength with its simulated route difficulty. Higher route difficulty means the team's title-winning paths usually run through stronger knockout opponents.",
         )
-        field = teams.copy()
+        field = group_teams.copy()
+        if field.empty:
+            st.info("No teams are available for the selected group.")
+            return
         field["champion_probability_pct"] = field["champion_probability"] * 100
         field["final_probability_pct"] = field["final_probability"] * 100
         chart_cols = st.columns([1.05, 0.95])
@@ -2133,7 +2150,11 @@ def render_team_lens(
                 display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {}, 350)
 
     section_header("Team Profile Table")
-    team_profile_table = teams.sort_values("dashboard_strength_index", ascending=False).copy()
+    team_table_source = group_teams if selected_group != "All groups" else teams
+    team_profile_table = team_table_source.sort_values(
+        "dashboard_strength_index",
+        ascending=False,
+    ).copy()
     team_profile_table["profile_coverage_pct"] = (
         team_profile_table["profile_completeness_score"] * 100
     ).round(0).astype(int).astype(str) + "%"
@@ -2147,6 +2168,7 @@ def render_team_lens(
             "fifa_rank",
             "current_elo",
             "fifa_points",
+            "player_star_power_index",
             "last_10_adjusted_points_per_match",
             "last_10_adjusted_goal_diff_per_match",
             "overall_star_power_z",
@@ -2163,6 +2185,7 @@ def render_team_lens(
             "fifa_rank": "Rank",
             "current_elo": "Elo",
             "fifa_points": "FIFA Points",
+            "player_star_power_index": "Star Power",
             "last_10_adjusted_points_per_match": "Adj Form",
             "last_10_adjusted_goal_diff_per_match": "Adj GD",
             "overall_star_power_z": "Intl Pedigree",
@@ -2177,6 +2200,7 @@ def render_team_lens(
         {
             "current_elo": "How strong the team has performed over time after accounting for opponent strength and match result surprise. Higher Elo means the team has consistently beaten strong opposition or avoided bad results.",
             "fifa_points": "Official FIFA ranking points from the latest ranking snapshot. This is FIFA's own view of recent national-team performance.",
+            "player_star_power_index": "How much elite player quality appears in the current player aggregate data. It blends maximum player rating, average team rating, attacking rating, shooting, passing, and pace.",
             "last_10_adjusted_points_per_match": "How much better or worse the team performed than expected in its last 10 matches. Beating strong teams earns more credit than beating weak teams.",
             "last_10_adjusted_goal_diff_per_match": "Goal difference above or below Elo expectation over the last 10 matches. This asks whether recent scorelines were better than the opponent quality suggested.",
             "overall_star_power_z": "How battle-tested this squad is at senior international level. Built from squad caps, goals, top-five caps, and top-five goals; positive values are above the field average.",
@@ -2558,7 +2582,7 @@ def main() -> None:
     with tabs[1]:
         render_tournament_view(matches, standings, teams, context, selected_group, selected_team)
     with tabs[2]:
-        render_team_lens(teams, matches, selected_team)
+        render_team_lens(teams, matches, selected_group, selected_team)
     with tabs[3]:
         render_model_evidence(metrics, quality, history)
 

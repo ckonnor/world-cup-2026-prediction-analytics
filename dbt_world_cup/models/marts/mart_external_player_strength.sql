@@ -22,6 +22,17 @@ select
     avg_physic,
     avg_attack_overall,
     avg_defense_overall,
+    0.30 * avg_overall
+        + 0.35 * max_overall
+        + 0.15 * coalesce(avg_attack_overall, avg_overall)
+        + 0.10 * coalesce(avg_shooting, avg_attack_overall, avg_overall)
+        + 0.05 * coalesce(avg_passing, avg_overall)
+        + 0.05 * coalesce(avg_pace, avg_overall) as player_star_power_index,
+    max_overall - avg_overall as superstar_gap,
+    0.40 * coalesce(avg_attack_overall, avg_overall)
+        + 0.30 * coalesce(avg_shooting, avg_attack_overall, avg_overall)
+        + 0.15 * coalesce(avg_passing, avg_overall)
+        + 0.15 * coalesce(avg_pace, avg_overall) as attacking_star_power_index,
     source_dataset,
     source_url,
     downloaded_at_utc
