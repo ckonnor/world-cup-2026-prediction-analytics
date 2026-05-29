@@ -36,11 +36,16 @@ The raw source files are intentionally not committed, so CI is designed to disti
 The dashboard app is designed for Streamlit Community Cloud:
 
 - app entrypoint: `app/streamlit_app.py`
-- dependency file: `requirements.txt`
+- cloud dependency file: `app/requirements.txt`
+- full local dependency file: `requirements.txt`
 - app data snapshot: `app/data/`
 - theme config: `.streamlit/config.toml`
 
 Once the GitHub repository is connected in Streamlit Community Cloud, the app can deploy from the `main` branch without access to the local DuckDB warehouse.
+
+Because the dashboard entrypoint lives in `app/`, Streamlit Community Cloud will use `app/requirements.txt` before the root `requirements.txt`. That keeps the hosted app from installing local-only packages such as dbt, DuckDB, and PyArrow.
+
+When deploying, open **Advanced settings** and choose Python 3.11 or 3.12. If an app has already been created with a different Python version, Streamlit requires deleting and redeploying the app to change Python versions.
 
 ## Deployment Readiness Checklist
 

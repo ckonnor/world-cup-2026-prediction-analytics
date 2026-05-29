@@ -6,4 +6,6 @@ The dashboard is designed as the public presentation layer: it explains the fore
 
 The app reads committed CSV snapshots from `app/data/`. Those files are generated from the dbt BI layer and final prediction outputs, then copied here so the dashboard can run on Streamlit Community Cloud as a lightweight hosted artifact.
 
+`app/requirements.txt` is intentionally much smaller than the root project requirements. Streamlit Community Cloud checks the app directory first, so the hosted dashboard installs only the packages it needs instead of the full dbt/modeling toolchain.
+
 CI validates the dashboard code and the committed data snapshot through `tests/test_dashboard_assets.py`.
