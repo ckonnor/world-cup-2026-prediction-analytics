@@ -612,7 +612,13 @@ def display_table(
     for column in table.select_dtypes(include=["float"]).columns:
         table[column] = table[column].round(3)
     table = table.where(pd.notna(table), "")
-    st.dataframe(table, use_container_width=True, hide_index=True, height=height)
+    dataframe_args = {
+        "use_container_width": True,
+        "hide_index": True,
+    }
+    if height is not None:
+        dataframe_args["height"] = height
+    st.dataframe(table, **dataframe_args)
 
 
 def polish_figure(fig: go.Figure, height: int = 360) -> go.Figure:

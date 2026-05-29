@@ -106,3 +106,10 @@ def test_dashboard_metrics_contract() -> None:
         "check_value",
     ]
     assert validation.tolist() == [1]
+
+
+def test_streamlit_table_helper_omits_none_height() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+
+    assert "st.dataframe(table, use_container_width=True, hide_index=True, height=height)" not in source
+    assert 'if height is not None:' in source
