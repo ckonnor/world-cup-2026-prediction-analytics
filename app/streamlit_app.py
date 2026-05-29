@@ -2011,6 +2011,8 @@ def render_team_lens(
                 size_max=24,
             )
             fig = polish_figure(fig, 430)
+            fig.update_xaxes(range=[30, 70])
+            fig.update_yaxes(range=[40, 100])
             st.plotly_chart(
                 fig,
                 use_container_width=True,
