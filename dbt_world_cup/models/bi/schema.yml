@@ -60,3 +60,22 @@ models:
       - name: matches
         tests:
           - not_null
+
+  - name: bi_player_power_profiles
+    description: Dashboard-ready roster table with player-level international experience, matched club involvement, discipline context, and a roster power proxy.
+    columns:
+      - name: team_name
+        tests:
+          - not_null
+      - name: group_letter
+        tests:
+          - not_null
+      - name: player_name
+        tests:
+          - not_null
+      - name: team_player_power_rank
+        tests:
+          - not_null
+      - name: player_star_power_index
+        tests:
+          - not_null

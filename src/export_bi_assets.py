@@ -21,6 +21,7 @@ from world_cup.paths import (
 
 BI_TABLES = {
     "dashboard_team_profiles.csv": "main_bi.bi_team_profiles",
+    "dashboard_player_power_profiles.csv": "main_bi.bi_player_power_profiles",
     "dashboard_match_feature_context.csv": "main_bi.bi_match_feature_context",
     "dashboard_historical_competition_summary.csv": (
         "main_bi.bi_historical_competition_summary"
@@ -254,6 +255,11 @@ def _sort_export_frame(output_name: str, frame: pd.DataFrame) -> pd.DataFrame:
         "dashboard_group_standings.csv": ["group_letter", "group_rank", "team_name"],
         "dashboard_data_quality.csv": ["check_group", "check_name"],
         "dashboard_team_profiles.csv": ["team_name"],
+        "dashboard_player_power_profiles.csv": [
+            "team_name",
+            "team_player_power_rank",
+            "player_name",
+        ],
         "dashboard_match_feature_context.csv": ["match_id"],
         "dashboard_historical_competition_summary.csv": ["match_year", "tournament"],
     }

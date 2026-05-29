@@ -14,6 +14,7 @@ EXPECTED_FILES = {
     "dashboard_match_feature_context.csv",
     "dashboard_match_predictions.csv",
     "dashboard_model_metrics.csv",
+    "dashboard_player_power_profiles.csv",
     "dashboard_team_profiles.csv",
     "dashboard_tournament_simulation.csv",
 }
@@ -105,6 +106,36 @@ def test_dashboard_group_and_team_contracts() -> None:
     assert set(teams["group_letter"]) == set("ABCDEFGHIJKL")
     assert standings["team_name"].isin(teams["team_name"]).all()
     assert teams["profile_completeness_score"].between(0, 1).all()
+
+
+def test_dashboard_player_power_contract() -> None:
+    players = _read_dashboard_csv("dashboard_player_power_profiles.csv")
+
+    required_columns = {
+        "team_name",
+        "group_letter",
+        "squad_status",
+        "team_player_power_rank",
+        "position",
+        "player_name",
+        "caps",
+        "international_goals",
+        "squad_club",
+        "club_minutes",
+        "club_goals",
+        "club_assists",
+        "club_yellow_cards",
+        "club_red_cards",
+        "has_club_player_stats",
+        "player_star_power_index",
+    }
+    assert required_columns.issubset(players.columns)
+    assert len(players) >= 1000
+    assert players["team_name"].nunique() >= 40
+    assert players["player_name"].notna().all()
+    assert players["team_player_power_rank"].notna().all()
+    assert players["player_star_power_index"].between(0, 100).all()
+    assert players.groupby("team_name")["team_player_power_rank"].min().eq(1).all()
 
 
 def test_dashboard_metrics_contract() -> None:
@@ -238,6 +269,8 @@ def test_team_profile_table_explains_model_columns() -> None:
     assert "How battle-tested this squad is at senior international level" in source
     assert "A dashboard-only composite view of team strength" in source
     assert "Coverage is a data-completeness check" in source
+    assert "Player Power Table" in source
+    assert "not an official FIFA player rating" in source
 
 
 def test_team_profile_enrichment_supports_older_dashboard_exports() -> None:
@@ -273,4 +306,4 @@ def test_group_filter_is_applied_to_team_views() -> None:
 
     assert 'team_options = team_options[team_options["group_letter"] == selected_group]' in source
     assert 'group_teams = group_teams[group_teams["group_letter"] == selected_group]' in source
-    assert "render_team_lens(teams, matches, selected_group, selected_team)" in source
+    assert "render_team_lens(teams, players, matches, selected_group, selected_team)" in source

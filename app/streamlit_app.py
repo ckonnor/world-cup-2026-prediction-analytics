@@ -837,6 +837,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         "matches": pd.read_csv(DATA_DIR / "dashboard_match_predictions.csv"),
         "standings": pd.read_csv(DATA_DIR / "dashboard_group_standings.csv"),
         "teams": pd.read_csv(DATA_DIR / "dashboard_team_profiles.csv"),
+        "players": pd.read_csv(DATA_DIR / "dashboard_player_power_profiles.csv"),
         "context": pd.read_csv(DATA_DIR / "dashboard_match_feature_context.csv"),
         "metrics": pd.read_csv(DATA_DIR / "dashboard_model_metrics.csv"),
         "quality": pd.read_csv(DATA_DIR / "dashboard_data_quality.csv"),
@@ -1982,6 +1983,7 @@ def render_groups(
 
 def render_team_lens(
     teams: pd.DataFrame,
+    players: pd.DataFrame,
     matches: pd.DataFrame,
     selected_group: str,
     selected_team: str,
@@ -2148,6 +2150,74 @@ def render_team_lens(
                 st.info("This team does not appear in the predicted tournament path.")
             else:
                 display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {}, 350)
+
+    if selected_team != "All teams":
+        section_header(
+            "Player Power Table",
+            "Roster-level view of international experience, current club involvement, production, discipline, and the dashboard player power proxy.",
+        )
+        player_power_table = players.loc[players["team_name"] == selected_team].sort_values(
+            "team_player_power_rank"
+        )
+        if player_power_table.empty:
+            st.info(
+                "No player-level roster table is available yet for this team. "
+                "The squad source is updated as countries publish usable roster tables."
+            )
+        else:
+            display_table(
+                player_power_table,
+                [
+                    "team_player_power_rank",
+                    "player_name",
+                    "position",
+                    "player_star_power_index",
+                    "age",
+                    "caps",
+                    "international_goals",
+                    "squad_club",
+                    "club_minutes",
+                    "club_goals",
+                    "club_assists",
+                    "club_yellow_cards",
+                    "club_red_cards",
+                    "has_club_player_stats",
+                ],
+                {
+                    "team_player_power_rank": "Rank",
+                    "player_name": "Player",
+                    "position": "Pos",
+                    "player_star_power_index": "Star Power",
+                    "age": "Age",
+                    "caps": "Caps",
+                    "international_goals": "Intl Goals",
+                    "squad_club": "Club",
+                    "club_minutes": "Club Min",
+                    "club_goals": "Club G",
+                    "club_assists": "Club A",
+                    "club_yellow_cards": "Yellows",
+                    "club_red_cards": "Reds",
+                    "has_club_player_stats": "Club Match",
+                },
+                460,
+                {
+                    "team_player_power_rank": "Ranking within the selected roster by the dashboard player power proxy.",
+                    "caps": "Senior international appearances in the current squad source.",
+                    "international_goals": "Senior international goals in the current squad source.",
+                    "club_minutes": "Matched 2025/26 club minutes from the player stats source. Missing matches are shown as zero.",
+                    "club_goals": "Matched 2025/26 club goals from the player stats source.",
+                    "club_assists": "Matched 2025/26 club assists from the player stats source.",
+                    "club_yellow_cards": "Matched 2025/26 club yellow cards from the player stats source.",
+                    "club_red_cards": "Matched 2025/26 club red cards from the player stats source.",
+                    "player_star_power_index": "A dashboard proxy for individual player power. It blends caps, international goals, club minutes, club starts, club goals and assists, defensive actions, and a small captain boost. It is not an official FIFA player rating.",
+                    "has_club_player_stats": "Whether the squad player matched the 2025/26 club player stats source by normalized name and country code.",
+                },
+            )
+            st.caption(
+                "Player Star Power is a portfolio-facing proxy, not an official player rating. "
+                "It helps identify which players carry the most current roster signal inside the public data we have."
+            )
+        return
 
     section_header("Team Profile Table")
     team_table_source = group_teams if selected_group != "All groups" else teams
@@ -2559,6 +2629,7 @@ def main() -> None:
     matches = data["matches"]
     standings = data["standings"]
     teams = data["teams"]
+    players = data["players"]
     context = data["context"]
     metrics = data["metrics"]
     quality = data["quality"]
@@ -2582,7 +2653,7 @@ def main() -> None:
     with tabs[1]:
         render_tournament_view(matches, standings, teams, context, selected_group, selected_team)
     with tabs[2]:
-        render_team_lens(teams, matches, selected_group, selected_team)
+        render_team_lens(teams, players, matches, selected_group, selected_team)
     with tabs[3]:
         render_model_evidence(metrics, quality, history)
 
