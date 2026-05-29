@@ -137,10 +137,31 @@ def test_streamlit_table_helper_omits_none_height() -> None:
 def test_dashboard_includes_portfolio_case_study_story() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
-    assert "Project Story" in source
+    assert "Overview" in source
+    assert "Project Build" in source
     assert "Analytics Engineering Pipeline" in source
     assert "features_historical_match_training" in source
-    assert "Why These Targets Matter" in source
+    assert "Target Rationale" in source
+
+
+def test_dashboard_navigation_is_consolidated() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+    tab_section = source.split("tabs = st.tabs(", 1)[1].split("with tabs[0]:", 1)[0]
+
+    assert '"Overview"' in tab_section
+    assert '"Tournament"' in tab_section
+    assert '"Teams"' in tab_section
+    assert '"Methodology"' in tab_section
+    for retired_tab in [
+        '"Project Story"',
+        '"Executive"',
+        '"Bracket"',
+        '"Groups"',
+        '"Team Lens"',
+        '"Matches"',
+        '"Model Evidence"',
+    ]:
+        assert retired_tab not in tab_section
 
 
 def test_team_profile_table_explains_model_columns() -> None:

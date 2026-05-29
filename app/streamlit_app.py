@@ -1191,15 +1191,10 @@ def render_leader_card(matches: pd.DataFrame) -> None:
     )
 
 
-def render_project_story(
-    matches: pd.DataFrame,
-    metrics: pd.DataFrame,
-    quality: pd.DataFrame,
-    history: pd.DataFrame,
-) -> None:
+def render_project_story() -> None:
     section_header(
-        "Project Story",
-        "This dashboard is designed as an analytics engineering case study: a tested dbt warehouse feeds a calibrated Python forecast, then publishes a stakeholder-ready BI layer.",
+        "Project Build",
+        "A compact case-study view of how the analytics engineering layer, model layer, and public dashboard fit together.",
     )
     st.markdown(
         '<div class="story-grid">'
@@ -1207,37 +1202,6 @@ def render_project_story(
         + "</div>",
         unsafe_allow_html=True,
     )
-
-    metric_cols = st.columns(4)
-    with metric_cols[0]:
-        metric_card(
-            "Blended outcome",
-            pct(metric_value(metrics, "blended_scoreline_outcome_accuracy")),
-            "Final scoreline result accuracy",
-        )
-    with metric_cols[1]:
-        metric_card(
-            "Exact score",
-            pct(metric_value(metrics, "reconciled_scoreline_exact_accuracy")),
-            "Stretch target cleared",
-        )
-    with metric_cols[2]:
-        metric_card(
-            "Average goals MAE",
-            f"{metric_value(metrics, 'average_goals_mae'):.3f}",
-            "Lower is better",
-        )
-    with metric_cols[3]:
-        valid_check = quality.loc[
-            (quality["check_group"] == "submission_validation")
-            & (quality["check_name"] == "valid"),
-            "check_value",
-        ]
-        metric_card(
-            "Submission checks",
-            "Passed" if valid_check.tolist() == [1] else "Review",
-            "104 predicted matches",
-        )
 
     section_header(
         "Analytics Engineering Pipeline",
@@ -1258,90 +1222,15 @@ def render_project_story(
         )
     st.markdown(f'<div class="pipeline-grid">{"".join(step_html)}</div>', unsafe_allow_html=True)
 
-    section_header(
-        "Model Design",
-        "The final submission is not one model pretending to solve every task. It is a reconciled system that keeps score, outcome, bracket, corners, and cards consistent.",
-    )
-    st.markdown(
-        '<div class="method-grid">'
-        + "".join(method_card(title, body) for title, body in MODEL_LAYERS)
-        + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    section_header(
-        "Why These Targets Matter",
-        "The targets are practical contracts for a low-scoring sport. They reward the exact-score competition objective without ignoring whether the forecast tells a believable tournament story.",
-    )
-    st.markdown(
-        '<div class="method-grid">'
-        + "".join(
-            method_card(title, body, priority) for title, priority, body in TARGET_RATIONALE
-        )
-        + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    chart_cols = st.columns([0.95, 1.05])
-    with chart_cols[0]:
-        scorelines = (
-            matches["scoreline"]
-            .value_counts()
-            .head(8)
-            .rename_axis("scoreline")
-            .reset_index(name="matches")
-        )
-        fig = px.bar(
-            scorelines,
-            x="matches",
-            y="scoreline",
-            orientation="h",
-            labels={"matches": "Predicted matches", "scoreline": "Scoreline"},
-            color="matches",
-            color_continuous_scale=["#dbeafe", "#2563eb"],
-        )
-        fig = polish_figure(fig, 330)
-        fig.update_layout(showlegend=False, coloraxis_showscale=False)
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            config=PLOT_CONFIG,
-            key="story_scoreline_distribution",
-        )
-
-    with chart_cols[1]:
-        recent_history = history[history["match_year"] >= 1992].copy()
-        history_summary = (
-            recent_history.groupby("match_year", as_index=False)
-            .agg(matches=("matches", "sum"), avg_total_goals=("avg_total_goals", "mean"))
-            .tail(35)
-        )
-        fig = px.line(
-            history_summary,
-            x="match_year",
-            y="avg_total_goals",
-            markers=True,
-            labels={"match_year": "Year", "avg_total_goals": "Average total goals"},
-        )
-        fig.update_traces(line_color=PALETTE["orange"])
-        fig = polish_figure(fig, 330)
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            config=PLOT_CONFIG,
-            key="story_goal_environment",
-        )
-
 
 def render_executive_view(
     matches: pd.DataFrame,
     metrics: pd.DataFrame,
     teams: pd.DataFrame,
-    selected_team: str,
 ) -> None:
     section_header(
-        "Executive Summary",
-        "The forecast balances conservative scorelines with team strength signals, then resolves the knockout bracket from the simulated group stage.",
+        "Forecast Overview",
+        "The forecast balances conservative scorelines with team-strength signals, then resolves the knockout bracket from the simulated group stage.",
     )
     left, right = st.columns([1.12, 0.88])
     with left:
@@ -1390,14 +1279,6 @@ def render_executive_view(
             "Feature marts are dashboard-ready",
             "dbt produces tested team, match, standings, quality, and model metric outputs for this app.",
         )
-
-    if selected_team != "All teams":
-        section_header(f"{selected_team} Tournament Path")
-        journey = team_journey(matches, selected_team)
-        if journey.empty:
-            st.info("This team does not appear in the predicted tournament path.")
-        else:
-            display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {})
 
     chart_cols = st.columns([1.05, 0.95])
     with chart_cols[0]:
@@ -1455,6 +1336,15 @@ def render_executive_view(
             config=PLOT_CONFIG,
             key="executive_scoreline_distribution",
         )
+
+
+def render_overview(
+    matches: pd.DataFrame,
+    metrics: pd.DataFrame,
+    teams: pd.DataFrame,
+) -> None:
+    render_executive_view(matches, metrics, teams)
+    render_project_story()
 
 
 def team_line(team: str, goals: int, winner: str) -> str:
@@ -1548,6 +1438,7 @@ def render_groups(
     teams: pd.DataFrame,
     selected_group: str,
     selected_team: str,
+    show_focused_matches: bool = True,
 ) -> None:
     group = effective_group(selected_group, selected_team, teams)
     section_header(
@@ -1625,32 +1516,33 @@ def render_groups(
         key="group_detail_points",
     )
 
-    section_header("Focused Group Matches")
-    display_table(
-        group_matches,
-        [
-            "match_id",
-            "date_utc",
-            "venue",
-            "predicted_home_team",
-            "predicted_away_team",
-            "scoreline",
-            "predicted_winner_team",
-            "corners",
-            "yellow_cards",
-        ],
-        {
-            "match_id": "Match",
-            "date_utc": "Date",
-            "venue": "Venue",
-            "predicted_home_team": "Home",
-            "predicted_away_team": "Away",
-            "scoreline": "Score",
-            "predicted_winner_team": "Winner",
-            "corners": "Corners",
-            "yellow_cards": "Yellows",
-        },
-    )
+    if show_focused_matches:
+        section_header("Focused Group Matches")
+        display_table(
+            group_matches,
+            [
+                "match_id",
+                "date_utc",
+                "venue",
+                "predicted_home_team",
+                "predicted_away_team",
+                "scoreline",
+                "predicted_winner_team",
+                "corners",
+                "yellow_cards",
+            ],
+            {
+                "match_id": "Match",
+                "date_utc": "Date",
+                "venue": "Venue",
+                "predicted_home_team": "Home",
+                "predicted_away_team": "Away",
+                "scoreline": "Score",
+                "predicted_winner_team": "Winner",
+                "corners": "Corners",
+                "yellow_cards": "Yellows",
+            },
+        )
 
 
 def render_team_lens(
@@ -1660,7 +1552,7 @@ def render_team_lens(
 ) -> None:
     if selected_team == "All teams":
         section_header(
-            "Team Lens",
+            "Team Comparison",
             "The field view compares ranking, Elo, opponent-adjusted form, squad signal, and the dashboard composite strength index.",
         )
         chart_cols = st.columns([1.05, 0.95])
@@ -1714,7 +1606,7 @@ def render_team_lens(
     else:
         profile = teams.loc[teams["team_name"] == selected_team].iloc[0]
         section_header(
-            f"{selected_team} Team Lens",
+            f"{selected_team} Team Focus",
             "Percentile scores compare the selected team with the rest of the tournament field.",
         )
         cards = st.columns(5)
@@ -1858,7 +1750,7 @@ def render_matches(
     selected_team: str,
 ) -> None:
     section_header(
-        "Match Detail",
+        "Match Explorer",
         "Prediction cards keep the current filter readable; the table below preserves the full submission-level detail.",
     )
     selected_phase = st.radio(
@@ -1954,6 +1846,26 @@ def render_matches(
         )
 
 
+def render_tournament_view(
+    matches: pd.DataFrame,
+    standings: pd.DataFrame,
+    teams: pd.DataFrame,
+    context: pd.DataFrame,
+    selected_group: str,
+    selected_team: str,
+) -> None:
+    render_bracket(matches, selected_team)
+    render_groups(
+        matches,
+        standings,
+        teams,
+        selected_group,
+        selected_team,
+        show_focused_matches=False,
+    )
+    render_matches(matches, context, selected_group, selected_team)
+
+
 def render_metric_cards(metrics: pd.DataFrame) -> None:
     metric_labels = {
         "rounded_scoreline_outcome_accuracy": "Rounded outcome",
@@ -1994,34 +1906,24 @@ def render_model_evidence(
     render_metric_cards(metrics)
 
     section_header(
-        "Evaluation Contract",
-        "The model is judged through several lenses because a World Cup submission has to predict both a believable score and a usable tournament path.",
+        "Model Architecture",
+        "The final submission is a reconciled forecasting system rather than one model trying to solve every prediction target.",
+    )
+    st.markdown(
+        '<div class="method-grid">'
+        + "".join(method_card(title, body) for title, body in MODEL_LAYERS)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    section_header(
+        "Target Rationale",
+        "The targets are practical contracts for a low-scoring sport. They reward exact-score value without losing sight of outcome realism.",
     )
     st.markdown(
         '<div class="method-grid">'
         + "".join(
-            [
-                method_card(
-                    "Time-based holdout",
-                    "Training uses matches before 2022, while holdout validation uses later matches. That keeps the evaluation closer to a real forecasting workflow.",
-                    "Validation",
-                ),
-                method_card(
-                    "Tournament calibration",
-                    "A 2018-2021 tournament-focused slice tuned draw behavior and the scoreline/outcome blend so the model does not overfit ordinary friendlies.",
-                    "Calibration",
-                ),
-                method_card(
-                    "Exact score emphasis",
-                    "Exact score is rare, but the competition rewards it heavily. Conservative outcomes such as 1-0 and 1-1 are common because they are both realistic and high-value.",
-                    "Scoring",
-                ),
-                method_card(
-                    "Outcome consistency",
-                    "The direct outcome model can be stronger than raw rounded scores, but the final submitted scoreline is reconciled so the winner, draw, and bracket do not disagree.",
-                    "Submission",
-                ),
-            ]
+            method_card(title, body, priority) for title, priority, body in TARGET_RATIONALE
         )
         + "</div>",
         unsafe_allow_html=True,
@@ -2195,29 +2097,20 @@ def main() -> None:
 
     tabs = st.tabs(
         [
-            "Project Story",
-            "Executive",
-            "Bracket",
-            "Groups",
-            "Team Lens",
-            "Matches",
-            "Model Evidence",
+            "Overview",
+            "Tournament",
+            "Teams",
+            "Methodology",
         ]
     )
 
     with tabs[0]:
-        render_project_story(matches, metrics, quality, history)
+        render_overview(matches, metrics, teams)
     with tabs[1]:
-        render_executive_view(matches, metrics, teams, selected_team)
+        render_tournament_view(matches, standings, teams, context, selected_group, selected_team)
     with tabs[2]:
-        render_bracket(matches, selected_team)
-    with tabs[3]:
-        render_groups(matches, standings, teams, selected_group, selected_team)
-    with tabs[4]:
         render_team_lens(teams, matches, selected_team)
-    with tabs[5]:
-        render_matches(matches, context, selected_group, selected_team)
-    with tabs[6]:
+    with tabs[3]:
         render_model_evidence(metrics, quality, history)
 
 
