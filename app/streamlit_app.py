@@ -846,6 +846,7 @@ def display_table(
     columns: list[str],
     labels: dict[str, str],
     height: int | None = None,
+    column_help: dict[str, str] | None = None,
 ) -> None:
     table = frame.loc[:, columns].rename(columns=labels).copy()
     for column in table.select_dtypes(include=["datetime64[ns, UTC]", "datetime64[ns]"]).columns:
@@ -859,6 +860,11 @@ def display_table(
     }
     if height is not None:
         dataframe_args["height"] = height
+    if column_help:
+        dataframe_args["column_config"] = {
+            labels.get(column, column): st.column_config.Column(help=help_text)
+            for column, help_text in column_help.items()
+        }
     st.dataframe(table, **dataframe_args)
 
 
@@ -1709,8 +1715,14 @@ def render_team_lens(
                 display_table(journey, ["Match", "Stage", "Opponent", "Score", "Result"], {}, 350)
 
     section_header("Team Profile Table")
+    team_profile_table = teams.sort_values("dashboard_strength_index", ascending=False).copy()
+    team_profile_table["profile_coverage_pct"] = (
+        team_profile_table["profile_completeness_score"] * 100
+    ).round(0).astype(int).astype(str) + "%"
+    full_coverage_count = int((team_profile_table["profile_completeness_score"] == 1).sum())
+    partial_coverage_count = int((team_profile_table["profile_completeness_score"] < 1).sum())
     display_table(
-        teams.sort_values("dashboard_strength_index", ascending=False),
+        team_profile_table,
         [
             "team_name",
             "group_letter",
@@ -1723,7 +1735,7 @@ def render_team_lens(
             "avg_corners_for",
             "blended_yellow_cards_for",
             "dashboard_strength_index",
-            "profile_completeness_score",
+            "profile_coverage_pct",
         ],
         {
             "team_name": "Team",
@@ -1737,9 +1749,23 @@ def render_team_lens(
             "avg_corners_for": "Corners For",
             "blended_yellow_cards_for": "Yellows",
             "dashboard_strength_index": "Strength",
-            "profile_completeness_score": "Coverage",
+            "profile_coverage_pct": "Coverage",
         },
         460,
+        {
+            "fifa_points": "Latest FIFA ranking points. Higher values indicate stronger recent official FIFA performance.",
+            "last_10_points_per_match": "Average points per match across the team's ten most recent international matches.",
+            "last_10_goal_diff_per_match": "Average goal difference per match across the team's ten most recent international matches.",
+            "overall_star_power_z": "Squad star-power z-score across the tournament field. Positive values are above field average.",
+            "attacking_star_power_z": "Attacking squad-strength z-score, weighted toward goals and top attacking contributors.",
+            "dashboard_strength_index": "Dashboard composite index combining FIFA points, FIFA rank, recent form, and squad star power.",
+            "profile_coverage_pct": "Share of the five expected team-profile inputs present: form, FIFA ranking, squad, event profile, and external player profile.",
+        },
+    )
+    st.caption(
+        f"Coverage is a data-completeness check, not a performance score: "
+        f"{full_coverage_count} teams have all five profile inputs and "
+        f"{partial_coverage_count} teams are missing one input."
     )
 
 

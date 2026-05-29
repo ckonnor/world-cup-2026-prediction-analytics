@@ -122,3 +122,12 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "Analytics Engineering Pipeline" in source
     assert "features_historical_match_training" in source
     assert "Why These Targets Matter" in source
+
+
+def test_team_profile_table_explains_model_columns() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+
+    assert "st.column_config.Column(help=help_text)" in source
+    assert "Latest FIFA ranking points" in source
+    assert "Average points per match across the team's ten most recent international matches" in source
+    assert "Coverage is a data-completeness check" in source
