@@ -2021,30 +2021,55 @@ def render_team_lens(
             )
 
         with chart_cols[1]:
-            field_table = field.nlargest(14, "dashboard_strength_index")
-            display_table(
-                field_table,
-                [
-                    "team_name",
-                    "group_letter",
-                    "fifa_rank",
-                    "current_elo",
-                    "dashboard_strength_index",
-                    "route_difficulty_index",
-                    "champion_probability_pct",
-                    "last_10_adjusted_points_per_match",
-                ],
-                {
-                    "team_name": "Team",
-                    "group_letter": "Group",
-                    "fifa_rank": "Rank",
-                    "current_elo": "Elo",
-                    "dashboard_strength_index": "Strength",
-                    "route_difficulty_index": "Route Difficulty",
-                    "champion_probability_pct": "Title %",
-                    "last_10_adjusted_points_per_match": "Adj Form",
+            contenders = (
+                field.nlargest(12, "champion_probability_pct")
+                .sort_values("champion_probability_pct")
+                .copy()
+            )
+            contenders["title_probability_label"] = (
+                contenders["champion_probability_pct"].round(1).astype(str) + "%"
+            )
+            title_axis_max = max(
+                10,
+                float(contenders["champion_probability_pct"].max()) + 4,
+            )
+            fig = px.bar(
+                contenders,
+                x="champion_probability_pct",
+                y="team_name",
+                color="route_difficulty_index",
+                text="title_probability_label",
+                orientation="h",
+                labels={
+                    "champion_probability_pct": "Title probability (%)",
+                    "team_name": "",
+                    "route_difficulty_index": "Difficulty",
                 },
-                430,
+                hover_data={
+                    "champion_probability_pct": ":.1f",
+                    "route_difficulty_index": ":.1f",
+                    "dashboard_strength_index": ":.1f",
+                    "final_probability_pct": ":.1f",
+                },
+                color_continuous_scale=["#14b8a6", "#f59e0b", "#dc2626"],
+            )
+            fig = polish_figure(fig, 430)
+            fig.update_traces(textposition="outside", cliponaxis=False)
+            fig.update_xaxes(range=[0, title_axis_max], showgrid=True, gridcolor="#e5e7eb")
+            fig.update_yaxes(
+                categoryorder="array",
+                categoryarray=contenders["team_name"].tolist(),
+            )
+            fig.update_layout(
+                title_text="Contender Route Context",
+                coloraxis_colorbar_title_text="Difficulty",
+                margin=dict(l=10, r=56, t=48, b=10),
+            )
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config=PLOT_CONFIG,
+                key="team_lens_contender_routes",
             )
     else:
         profile = teams.loc[teams["team_name"] == selected_team].iloc[0]
