@@ -2,12 +2,8 @@
 
 This folder contains the portfolio dashboard app for the World Cup prediction project.
 
-The app reads committed CSV snapshots from `app/data/`. Those files are generated from the dbt BI layer and final prediction outputs, then copied here so the dashboard can run on Streamlit Community Cloud without rebuilding the entire modeling pipeline.
+The dashboard is designed as the public presentation layer: it explains the forecast, bracket, team profiles, match predictions, and model evidence without requiring access to raw files or the local DuckDB warehouse.
 
-Local run command:
+The app reads committed CSV snapshots from `app/data/`. Those files are generated from the dbt BI layer and final prediction outputs, then copied here so the dashboard can run on Streamlit Community Cloud as a lightweight hosted artifact.
 
-```powershell
-streamlit run app/streamlit_app.py
-```
-
-The app is intended to be hosted publicly after connecting the GitHub repository to Streamlit Community Cloud.
+CI validates the dashboard code and the committed data snapshot through `tests/test_dashboard_assets.py`.

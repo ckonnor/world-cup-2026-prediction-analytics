@@ -6,7 +6,7 @@ on:
     branches: ["main"]
 
 jobs:
-  validate:
+  validate-analytics-project:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,19 +23,30 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Parse dbt project
+      - name: Validate dbt project graph
         run: dbt parse --project-dir dbt_world_cup --profiles-dir dbt_profiles
 
-      - name: Build dbt project when raw files are present
+      - name: Run full dbt build when raw files are available
         run: |
           if [ -f data/raw/group_fixtures.csv ] && [ -f data/raw/knockout_slots.csv ]; then
             dbt build --project-dir dbt_world_cup --profiles-dir dbt_profiles
           else
-            echo "Skipping dbt build because DataCamp raw files are not committed yet."
+            echo "Skipping dbt build because raw source CSVs are intentionally not committed."
           fi
 
-      - name: Run tests
+      - name: Validate Python and Streamlit syntax
+        run: python -m compileall src app tests
+
+      - name: Run Python tests and dashboard data contracts
         run: pytest
 
-      - name: Run Python smoke check
-        run: python -m compileall src
+      - name: Upload dbt parse artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dbt-parse-artifacts
+          path: |
+            dbt_world_cup/target/manifest.json
+            dbt_world_cup/target/semantic_manifest.json
+            dbt_world_cup/target/partial_parse.msgpack
+          if-no-files-found: ignore

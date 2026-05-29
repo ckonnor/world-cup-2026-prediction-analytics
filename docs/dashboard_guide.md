@@ -74,53 +74,18 @@ Looker Studio is a good free presentation layer, but the local DuckDB file is no
 4. Keep `dashboard_match_predictions.csv` as the main report-level data source.
 5. Add the other sources only on pages that need them.
 
-## Suggested Pages
+## Streamlit Dashboard Pages
 
-### Tournament Overview
+The current Streamlit dashboard is organized into six stakeholder-facing pages.
 
-- Scorecards: champion, runner-up, total predicted goals, predicted penalty shootouts.
-- Bar chart: matches by result label.
-- Table: final four and final match.
-- Filter controls: phase, round, group.
-
-Primary source: `dashboard_match_predictions.csv`.
-
-### Group Stage
-
-- Group table by `group_letter` and `group_rank`.
-- Scoreline table by match.
-- Bar chart: points by team within selected group.
-
-Primary sources:
-
-- `dashboard_group_standings.csv`
-- `dashboard_match_predictions.csv`
-
-### Team Strength
-
-- Scatter plot: FIFA rank vs overall star power.
-- Bar chart: last-10 points per match by team.
-- Table: profile completeness and data coverage flags.
-
-Primary source: `dashboard_team_profiles.csv`.
-
-### Match Context
-
-- Table: group matches with FIFA rank difference, form difference, star-power difference, and expected cards/corners.
-- Conditional formatting: highlight large rank or star-power differences.
-
-Primary source: `dashboard_match_feature_context.csv`.
-
-### Model Quality
-
-- Scorecards: direct outcome accuracy, blended outcome accuracy, exact score accuracy, average goals MAE.
-- Bullet/table visual: current vs guardrail/target/stretch.
-- Data quality checks: row counts and prediction distributions.
-
-Primary sources:
-
-- `dashboard_model_metrics.csv`
-- `dashboard_data_quality.csv`
+| Page | Purpose | Primary Sources |
+| --- | --- | --- |
+| Executive | Lead with the tournament forecast, key metrics, and strongest narrative takeaways. | `dashboard_match_predictions.csv`, `dashboard_model_metrics.csv`, `dashboard_team_profiles.csv` |
+| Bracket | Show all knockout predictions in a readable bracket-style layout. | `dashboard_match_predictions.csv` |
+| Groups | Show projected group qualifiers, then drill into a focused group table and fixtures. | `dashboard_group_standings.csv`, `dashboard_match_predictions.csv` |
+| Team Lens | Compare the field or inspect one selected team across strength signals and predicted path. | `dashboard_team_profiles.csv`, `dashboard_match_predictions.csv` |
+| Matches | Present readable prediction cards plus the full match-level table and feature context. | `dashboard_match_predictions.csv`, `dashboard_match_feature_context.csv` |
+| Model Evidence | Connect forecast outputs back to validation targets and data-quality checks. | `dashboard_model_metrics.csv`, `dashboard_data_quality.csv`, `dashboard_historical_competition_summary.csv` |
 
 ## Portfolio Framing
 

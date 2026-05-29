@@ -25,7 +25,7 @@ Built a reproducible FIFA World Cup 2026 forecasting warehouse using Python, Duc
 
 ## Next Portfolio Improvements
 
-- Publish a Looker Studio dashboard and add the public report link to the README.
-- Add screenshots of dbt lineage and the dashboard.
-- Add GitHub Actions that run dbt parse/build checks on sample data.
-- Add a short architecture diagram showing raw data, dbt layers, Python modeling, and BI exports.
+- Deploy the Streamlit dashboard and add the public app link to the README.
+- Add dbt docs screenshots for the feature and BI model lineage.
+- Add dashboard screenshots to the repo page once the final visual state is stable.
+- Write a short case-study post that explains the project decisions in business language.

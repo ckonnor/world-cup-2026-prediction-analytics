@@ -100,13 +100,16 @@ Python tests cover:
 - DataCamp submission validation
 - BI export shaping
 - model helper functions
+- dashboard snapshot contracts
 
 At the time of the latest commit:
 
 ```text
 dbt build: PASS=272 WARN=0 ERROR=0
-pytest: 18 passed
+pytest: 22 passed
 ```
+
+GitHub Actions also parses the dbt project, validates Python and Streamlit syntax, runs the test suite, and uploads dbt parse artifacts for lineage inspection.
 
 ## Dashboard Layer
 
@@ -141,12 +144,27 @@ Useful places to start:
 - `src/train_model.py`: model training and tournament simulation
 - `src/export_datacamp_submission.py`: final competition export validation
 - `src/export_bi_assets.py`: BI/dashboard export generation
+- `docs/architecture.md`: system architecture and layer responsibilities
+- `docs/metrics_and_contracts.md`: metric definitions and dashboard data contracts
+- `docs/operations_and_deployment.md`: CI, refresh, and deployment operating model
+- `docs/dbt_docs_and_lineage.md`: dbt docs and lineage guidance
 - `docs/dbt_learning_notes.md`: walkthrough of the dbt layers
 - `docs/model_training_notes.md`: modeling notes and metrics
 - `docs/dashboard_guide.md`: dashboard plan and BI export definitions
 - `docs/resume_project_positioning.md`: portfolio framing
 
 Raw source files, the local DuckDB warehouse, and generated CSV outputs are not committed to the repo. The repository focuses on the pipeline, transformations, tests, documentation, and modeling logic.
+
+## Production Readiness
+
+The project is still a portfolio project, but it now includes the operating pieces expected in a professional analytics workflow:
+
+- layered dbt transformations with model tests and custom assertions
+- point-in-time feature engineering to avoid historical leakage
+- CI validation for dbt parsing, Python tests, dashboard contracts, and Streamlit syntax
+- committed dashboard snapshots for lightweight public hosting
+- architecture, lineage, metric, contract, and deployment documentation
+- a stakeholder-facing Streamlit dashboard that explains the forecast rather than only exposing tables
 
 ## Portfolio Framing
 
