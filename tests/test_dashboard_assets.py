@@ -150,6 +150,23 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "Target Rationale" in source
 
 
+def test_methodology_includes_source_links() -> None:
+    source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
+
+    assert "Data Source Links" in source
+    assert "https://app.datacamp.com/learn/competitions/world-cup-prediction" in source
+    assert "https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017" in source
+    assert "https://github.com/martj42/international_results" in source
+    assert "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_squads" in source
+    assert "https://inside.fifa.com/fifa-world-ranking/men" in source
+    assert "https://api.fifa.com/api/v3/rankings?gender=1&count=250&language=en" in source
+    assert "https://github.com/Dato-Futbol/fifa-ranking" in source
+    assert "https://www.kaggle.com/datasets/lchikry/international-football-match-features-and-statistics" in source
+    assert "https://footystats.org/download-stats-csv" in source
+    assert "https://footystats.org/england/premier-league/datasets" in source
+    assert "https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026" in source
+
+
 def test_dashboard_navigation_is_consolidated() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
     tab_section = source.split("tabs = st.tabs(", 1)[1].split("with tabs[0]:", 1)[0]

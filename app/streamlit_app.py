@@ -178,6 +178,82 @@ TRAINING_SIGNAL_CARDS = [
         "The final scoreline blends Poisson score likelihood with direct outcome probabilities. The blend weight and draw threshold are tuned on a tournament-focused validation slice rather than set by hand.",
     ),
 ]
+DATA_SOURCE_LINKS = [
+    (
+        "Competition fixtures",
+        "DataCamp",
+        "Group fixtures and knockout slots supplied by the competition workbook.",
+        [
+            (
+                "DataCamp challenge",
+                "https://app.datacamp.com/learn/competitions/world-cup-prediction",
+            ),
+        ],
+    ),
+    (
+        "Historical results",
+        "Kaggle + GitHub",
+        "International match scores and shootouts used for training targets, form, Elo, and validation.",
+        [
+            (
+                "Kaggle dataset",
+                "https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017",
+            ),
+            ("GitHub source", "https://github.com/martj42/international_results"),
+        ],
+    ),
+    (
+        "Squad tables",
+        "Wikipedia",
+        "Current 2026 squad rows used for international pedigree, caps, goals, age, position, and club context.",
+        [
+            (
+                "2026 World Cup squads",
+                "https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_squads",
+            ),
+        ],
+    ),
+    (
+        "FIFA rankings",
+        "FIFA + Dato-Futbol",
+        "Current and historical ranking snapshots used for point-in-time rank and points features.",
+        [
+            ("FIFA ranking page", "https://inside.fifa.com/fifa-world-ranking/men"),
+            (
+                "FIFA current API",
+                "https://api.fifa.com/api/v3/rankings?gender=1&count=250&language=en",
+            ),
+            ("Historical rankings", "https://github.com/Dato-Futbol/fifa-ranking"),
+        ],
+    ),
+    (
+        "External player features",
+        "Kaggle",
+        "Historical match-feature data and EA/FIFA-style country player aggregates used by the direct outcome model.",
+        [
+            (
+                "Match and player features",
+                "https://www.kaggle.com/datasets/lchikry/international-football-match-features-and-statistics",
+            ),
+        ],
+    ),
+    (
+        "Corners and cards",
+        "FootyStats + Kaggle",
+        "International event rates and club-player discipline data used for corners, yellow cards, and red cards.",
+        [
+            ("FootyStats CSV downloads", "https://footystats.org/download-stats-csv"),
+            (
+                "FootyStats dataset example",
+                "https://footystats.org/england/premier-league/datasets",
+            ),
+            (
+                "Club player stats",
+                "https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026",
+            ),
+        ],
+    ),
+]
 
 px.defaults.template = "plotly_white"
 
@@ -498,6 +574,51 @@ st.markdown(
             font-size: 0.88rem;
             line-height: 1.42;
         }
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin: 0.75rem 0 1rem;
+        }
+        .source-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.9rem 1rem;
+        }
+        .source-title {
+            color: var(--ink);
+            font-size: 0.98rem;
+            font-weight: 760;
+            line-height: 1.2;
+            margin-bottom: 0.35rem;
+        }
+        .source-body {
+            color: #475569;
+            font-size: 0.84rem;
+            line-height: 1.38;
+            margin-bottom: 0.65rem;
+        }
+        .source-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+        .source-link {
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            color: #1d4ed8;
+            background: #eff6ff;
+            font-size: 0.74rem;
+            font-weight: 700;
+            padding: 0.25rem 0.55rem;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .source-link:hover {
+            color: #1e40af;
+            border-color: #93c5fd;
+        }
         .priority-badge {
             border-radius: 999px;
             background: var(--subtle);
@@ -695,7 +816,7 @@ st.markdown(
                 justify-content: flex-start;
                 margin-top: 0.75rem;
             }
-            .leader-strip, .prediction-grid, .story-grid, .pipeline-grid, .method-grid {
+            .leader-strip, .prediction-grid, .story-grid, .pipeline-grid, .method-grid, .source-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -879,6 +1000,31 @@ def method_card(title: str, body: str, badge: str | None = None) -> str:
             badge_html,
             f'<div class="method-title">{safe(title)}</div>',
             f'<div class="method-body">{safe(body)}</div>',
+            "</div>",
+        ]
+    )
+
+
+def data_source_card(
+    title: str,
+    badge: str,
+    body: str,
+    links: list[tuple[str, str]],
+) -> str:
+    link_html = "".join(
+        (
+            f'<a class="source-link" href="{safe(url)}" target="_blank" '
+            f'rel="noopener noreferrer">{safe(label)}</a>'
+        )
+        for label, url in links
+    )
+    return "\n".join(
+        [
+            '<div class="source-card">',
+            f'<div class="priority-badge">{safe(badge)}</div>',
+            f'<div class="source-title">{safe(title)}</div>',
+            f'<div class="source-body">{safe(body)}</div>',
+            f'<div class="source-links">{link_html}</div>',
             "</div>",
         ]
     )
@@ -2142,6 +2288,20 @@ def render_model_evidence(
             "stretch": "Stretch",
             "status": "Status",
         },
+    )
+
+    section_header(
+        "Data Source Links",
+        "Primary source pages for the raw files and external features used in the dbt warehouse and Python modeling layer.",
+    )
+    st.markdown(
+        '<div class="source-grid">'
+        + "".join(
+            data_source_card(title, badge, body, links)
+            for title, badge, body, links in DATA_SOURCE_LINKS
+        )
+        + "</div>",
+        unsafe_allow_html=True,
     )
 
 
