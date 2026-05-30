@@ -400,13 +400,6 @@ st.markdown(
             margin: 0;
             max-width: 45rem;
         }
-        .app-subtitle {
-            color: var(--muted);
-            font-size: 0.98rem;
-            line-height: 1.48;
-            margin: 0.7rem 0 0;
-            max-width: 58rem;
-        }
         .stack-pills {
             display: flex;
             gap: 0.4rem;
@@ -1407,10 +1400,6 @@ def render_header() -> None:
                 <div>
                     <div class="eyebrow">Analytics Engineering Portfolio Case Study</div>
                     <h1 class="app-title">FIFA World Cup 2026 Prediction Analytics</h1>
-                    <p class="app-subtitle">
-                        A senior-level forecasting data product built from dbt feature marts, FIFA rankings,
-                        international results, squad profiles, event signals, and calibrated Python simulation logic.
-                    </p>
                 </div>
                 <div class="stack-pills">
                     <span class="pill">dbt</span>
