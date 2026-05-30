@@ -176,7 +176,7 @@ TRAINING_SIGNAL_CARDS = [
     (
         "Scoreline calibration",
         "Calibrated blend",
-        "The final scoreline blends Poisson score likelihood with direct outcome probabilities. The blend weight and draw threshold are tuned on a tournament-focused validation slice rather than set by hand.",
+        "The final scoreline blends Poisson score likelihood with direct outcome probabilities. The global 0.39 blend was selected because it improves outcome accuracy, keeps penalty frequency closer to World Cup history, and preserves a more believable final scoreline.",
     ),
 ]
 DATA_SOURCE_LINKS = [

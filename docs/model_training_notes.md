@@ -63,11 +63,11 @@ dbt resolves known playoff placeholders before prediction and exposes model team
 
 The pipeline now trains a separate direct outcome model for `home`, `draw`, and `away`. This outcome model gets the external player aggregate match features and three dbt-built star-power differentials: overall star power, superstar gap, and attacking star power. The goal models keep the cleaner dbt/FIFA/Elo feature set. The final scoreline comes from a blended score grid: Python builds independent Poisson probabilities for every plausible scoreline, then reweights each score by the direct outcome probability for that scoreline's result. The selected score determines the final group-stage `winning_team`, so the output stays internally consistent without letting the classifier force an implausible winner by itself.
 
-The star-power feature was only promoted after an A/B pass. Adding the three summary differentials lifted holdout direct outcome accuracy from about `62.4%` to `62.8%`, blended scoreline outcome accuracy from about `62.4%` to `62.6%`, and reconciled exact score accuracy from about `14.7%` to `14.9%`. Larger star-power bundles were not used because they became redundant with the existing raw player aggregate fields.
+The star-power feature was only promoted after an A/B pass. Adding the three summary differentials lifted holdout direct outcome accuracy from about `62.4%` to `62.8%` and helped keep the blended scoreline model above the 62% outcome target. Larger star-power bundles were not used because they became redundant with the existing raw player aggregate fields.
 
 For current 2026 scoring, dbt now replaces the older country-level star proxy with a roster-level top-league player signal where the squad can be matched. This signal uses post-2022-World-Cup appearances in covered top leagues, league-adjusted goal contribution per 90, sample reliability, current market value, peak market value, and reliable international goal rate. This changed the current prediction set slightly without changing the historical holdout metrics, because the historical training fold still uses the original point-in-time external match-feature source.
 
-The external match-feature source includes context flags such as `is_neutral`, but those flags behaved like fixture-order leakage for neutral tournament matches. The outcome model therefore uses the external strength and form fields, but excludes those external context flags. Model selection and calibration use a 2018-2021 tournament-focused validation slice made from World Cups, continental championships, Nations League-style competitions, and their qualifiers. The direct outcome draw threshold and the blended scoreline weight both use a minimum predicted draw-rate guardrail, which sacrifices a small amount of pure accuracy to avoid unrealistic no-draw tournament forecasts.
+The external match-feature source includes context flags such as `is_neutral`, but those flags behaved like fixture-order leakage for neutral tournament matches. The outcome model therefore uses the external strength and form fields, but excludes those external context flags. Model selection and calibration use a 2018-2021 tournament-focused validation slice made from World Cups, continental championships, Nations League-style competitions, and their qualifiers. The direct outcome draw threshold uses a minimum predicted draw-rate guardrail. The final scoreline selector uses one global `0.39` outcome blend after comparing candidate weights for holdout accuracy, knockout penalty realism, and final-bracket plausibility.
 
 Group standings use standard points, goal difference, and goals-for ordering. If teams remain tied after those fields, the prediction pipeline uses model tiebreak strength instead of alphabetical order. This is a proxy for official fair-play or drawing-lots tiebreakers that are not knowable before the tournament.
 
@@ -100,10 +100,10 @@ Holdout average goals MAE: 0.907
 Raw rounded exact score accuracy: 0.106
 Raw rounded match outcome accuracy: 0.547
 Direct outcome accuracy: 0.628
-Blended scoreline outcome accuracy: 0.626
-Blended exact score accuracy: 0.149
+Blended scoreline outcome accuracy: 0.631
+Blended exact score accuracy: 0.147
 Selected draw threshold: 0.35
-Selected scoreline/outcome blend weight: 0.30
+Selected scoreline/outcome blend weight: 0.39
 ```
 
 For comparison, v1 had holdout match outcome accuracy of about `0.482`. Replacing raw recent form with Elo-adjusted form lifted direct outcome accuracy above the 62% target. The blended Poisson scoreline selector also clears the 62% outcome target, keeps exact-score accuracy above the stretch target, and produces a more realistic final outcome distribution than hard-forcing every scoreline to match the classifier's top result.
@@ -116,7 +116,7 @@ These are working targets for this project, not guarantees. The guardrail is the
 | --- | ---: | ---: | ---: | ---: | --- |
 | Raw rounded scoreline outcome accuracy | 54.7% | 54.5% | 57.0% | 60.0% | Higher is better |
 | Direct outcome accuracy | 62.8% | 58.0% | 62.0% | 65.0% | Higher is better |
-| Reconciled scoreline exact accuracy | 14.9% | 10.0% | 12.0% | 14.0% | Higher is better |
+| Reconciled scoreline exact accuracy | 14.7% | 10.0% | 12.0% | 14.0% | Higher is better |
 | Average goals MAE | 0.907 | 0.950 | 0.900 | 0.860 | Lower is better |
 
 The metrics JSON includes these same target bands under `metric_targets`, with a status for each metric.

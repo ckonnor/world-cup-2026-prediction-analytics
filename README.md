@@ -73,13 +73,13 @@ The latest stable validation metrics are:
 | Metric | Result |
 | --- | ---: |
 | Direct outcome accuracy | 62.8% |
-| Blended scoreline outcome accuracy | 62.6% |
-| Reconciled exact score accuracy | 14.9% |
+| Blended scoreline outcome accuracy | 63.1% |
+| Reconciled exact score accuracy | 14.7% |
 | Average goals MAE | 0.907 |
 
 Those numbers are not betting-grade, but they are realistic for a public-data international soccer forecast without market odds. Exact score prediction is especially hard, so the model is intentionally conservative with scorelines.
 
-The current simulated tournament winner is Spain over Argentina, with France finishing third.
+The current deterministic bracket has Spain beating Argentina on penalties in the final, with Brazil finishing third. The repeated simulation layer still shows Argentina as the narrow title-probability favorite across many possible tournament paths.
 
 ## Validation And Quality Checks
 

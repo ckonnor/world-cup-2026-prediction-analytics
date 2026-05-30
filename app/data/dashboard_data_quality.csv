@@ -1,9 +1,9 @@
 check_group,check_name,check_value
-group_result_distribution,away,5
-group_result_distribution,draw,23
-group_result_distribution,home,44
-knockout_penalties,False,21
-knockout_penalties,True,11
+group_result_distribution,away,4
+group_result_distribution,draw,20
+group_result_distribution,home,48
+knockout_penalties,False,23
+knockout_penalties,True,9
 row_count,combined_predictions,104
 row_count,group_predictions,72
 row_count,knockout_predictions,32

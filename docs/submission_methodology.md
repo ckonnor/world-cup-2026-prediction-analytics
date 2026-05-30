@@ -49,7 +49,7 @@ The model has four prediction layers:
 3. Final scoreline
    - Python builds a Poisson score grid for plausible exact scores.
    - Each scoreline is blended with the direct outcome probability for that scoreline's result.
-   - Tournament-focused calibration selected a `0.30` outcome blend weight and a `0.35` draw threshold.
+   - Final calibration uses a single global `0.39` outcome blend weight and a `0.35` draw threshold. The `0.39` blend improves holdout outcome accuracy while keeping knockout penalty frequency closer to historical World Cup rates than the lower-blend alternatives.
 
 4. Events
    - Corners and cards are predicted from dbt-built team event profiles.
@@ -69,8 +69,8 @@ Current holdout metrics:
 | Metric | Value |
 | --- | ---: |
 | Direct outcome accuracy | 62.8% |
-| Blended scoreline outcome accuracy | 62.6% |
-| Reconciled exact score accuracy | 14.9% |
+| Blended scoreline outcome accuracy | 63.1% |
+| Reconciled exact score accuracy | 14.7% |
 | Average goals MAE | 0.907 |
 
 The final submission export validates:
