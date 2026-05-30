@@ -291,7 +291,10 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "Training Data and Signal Weighting" in source
     assert "Championship Probability Layer" in source
     assert "Model vs Polymarket Title Odds" in source
-    assert "Repeated simulations estimate title probabilities" in source
+    assert "Submitted bracket forecast" in source
+    assert "Submitted bracket champion" in source
+    assert "Bracket winner and title favorite can differ" in source
+    assert "the submitted bracket picks one deterministic" in source
     assert "Difficulty of Schedule" in source
     assert "Learned model features do not have fixed dashboard weights" in source
     assert "Player-quality aggregates" in source

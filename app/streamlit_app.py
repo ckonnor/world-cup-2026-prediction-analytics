@@ -1542,12 +1542,13 @@ def render_leader_card(matches: pd.DataFrame) -> None:
         "\n".join(
             [
                 '<div class="leader-card">',
-                '<div class="leader-label">Tournament forecast</div>',
+                '<div class="leader-label">Submitted bracket forecast</div>',
                 f'<div class="leader-title">{safe(champion)} wins the World Cup</div>',
                 f'<div class="leader-detail">{safe(final_description(final_row))}. '
-                f'{safe(third_place)} are projected to finish third.</div>',
+                f'{safe(third_place)} are projected to finish third. '
+                "This is the single DataCamp submission path, not the full probability field.</div>",
                 '<div class="leader-strip">',
-                f'<div class="leader-mini"><div class="leader-mini-label">Champion</div>'
+                f'<div class="leader-mini"><div class="leader-mini-label">Bracket champion</div>'
                 f'<div class="leader-mini-value">{safe(champion)}</div></div>',
                 f'<div class="leader-mini"><div class="leader-mini-label">Runner-up</div>'
                 f'<div class="leader-mini-value">{safe(runner_up)}</div></div>',
@@ -1626,22 +1627,22 @@ def render_simulation_summary(
 
     section_header(
         "Championship Probability Layer",
-        f"The submitted bracket is one internally consistent path. This view samples "
+        f"The submitted bracket is one internally consistent path, while this view samples "
         f"{simulation_runs:,} full tournaments from the same calibrated scoreline model "
-        "to estimate how often each team survives the field.",
+        "to estimate who wins most often across many plausible paths.",
     )
     summary_cols = st.columns(3)
     with summary_cols[0]:
         metric_card(
             "Simulation favorite",
             str(favorite["team_name"]),
-            f"{pct(float(favorite['champion_probability']))} title probability",
+            f"{pct(float(favorite['champion_probability']))} of sampled tournaments",
         )
     with summary_cols[1]:
         metric_card(
-            "Submitted champion odds",
-            pct(deterministic_probability),
+            "Submitted bracket champion",
             deterministic_champion,
+            f"{pct(deterministic_probability)} simulation title share",
         )
     with summary_cols[2]:
         metric_card(
@@ -1649,6 +1650,11 @@ def render_simulation_summary(
             pct(top_three_probability),
             "How concentrated the field is",
         )
+    st.caption(
+        "Read this as two related outputs: the submitted bracket picks one deterministic "
+        "match-by-match path, while the simulation favorite is the team with the highest "
+        "championship probability across repeated sampled tournaments."
+    )
 
     chart_cols = st.columns([1.05, 0.95])
     with chart_cols[0]:
@@ -1849,7 +1855,7 @@ def render_executive_view(
 ) -> None:
     section_header(
         "Forecast Overview",
-        "The forecast balances conservative scorelines with team-strength signals, then resolves the knockout bracket from the simulated group stage.",
+        "The forecast creates one DataCamp-ready bracket, then uses repeated simulations to show how much uncertainty sits around that path.",
     )
     left, right = st.columns([1.12, 0.88])
     with left:
@@ -1877,8 +1883,8 @@ def render_executive_view(
     with insight_cols[0]:
         insight_card(
             "Uncertainty layer",
-            "One bracket is not the whole forecast",
-            "Repeated simulations estimate title probabilities across many plausible group tables and knockout paths.",
+            "Bracket winner and title favorite can differ",
+            "Spain wins the submitted path; Argentina wins most often across repeated sampled tournaments.",
         )
     with insight_cols[1]:
         insight_card(
