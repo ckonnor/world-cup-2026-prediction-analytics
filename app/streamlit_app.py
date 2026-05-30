@@ -1578,11 +1578,28 @@ def simulation_view(simulation: pd.DataFrame, teams: pd.DataFrame) -> pd.DataFra
         frame["avg_group_points"],
         errors="coerce",
     ).fillna(0.0)
-    return frame.merge(
-        teams[["team_name", "confederation", "dashboard_strength_index"]],
+    enriched = frame.merge(
+        teams[
+            available_columns(
+                teams,
+                [
+                    "team_name",
+                    "confederation",
+                    "dashboard_strength_index",
+                    "polymarket_outright_probability",
+                ],
+            )
+        ],
         on="team_name",
         how="left",
     )
+    if "polymarket_outright_probability" not in enriched.columns:
+        enriched["polymarket_outright_probability"] = 0.0
+    enriched["polymarket_outright_probability"] = pd.to_numeric(
+        enriched["polymarket_outright_probability"],
+        errors="coerce",
+    ).fillna(0.0)
+    return enriched
 
 
 def render_simulation_summary(
@@ -1635,36 +1652,83 @@ def render_simulation_summary(
 
     chart_cols = st.columns([1.05, 0.95])
     with chart_cols[0]:
-        contenders = sim.nlargest(12, "champion_probability").sort_values(
-            "champion_probability",
+        contenders = sim.copy()
+        contenders["model_title_probability_pct"] = contenders["champion_probability"] * 100
+        contenders["polymarket_title_probability_pct"] = (
+            contenders["polymarket_outright_probability"] * 100
         )
-        contenders["champion_probability_pct"] = contenders["champion_probability"] * 100
+        contenders["comparison_probability_pct"] = contenders[
+            ["model_title_probability_pct", "polymarket_title_probability_pct"]
+        ].max(axis=1)
+        contenders = contenders.nlargest(12, "comparison_probability_pct").sort_values(
+            "comparison_probability_pct",
+        )
+        comparison = contenders.melt(
+            id_vars=[
+                "team_name",
+                "confederation",
+                "final_probability",
+                "semi_final_probability",
+                "dashboard_strength_index",
+            ],
+            value_vars=["model_title_probability_pct", "polymarket_title_probability_pct"],
+            var_name="probability_source",
+            value_name="winner_probability_pct",
+        )
+        comparison["probability_source"] = comparison["probability_source"].map(
+            {
+                "model_title_probability_pct": "Our model",
+                "polymarket_title_probability_pct": "Polymarket",
+            }
+        )
         fig = px.bar(
-            contenders,
-            x="champion_probability_pct",
+            comparison,
+            x="winner_probability_pct",
             y="team_name",
+            barmode="group",
             orientation="h",
-            color="confederation",
-            color_discrete_sequence=px.colors.qualitative.Set2,
+            color="probability_source",
+            color_discrete_map={
+                "Our model": PALETTE["blue"],
+                "Polymarket": PALETTE["orange"],
+            },
             labels={
-                "champion_probability_pct": "Title probability (%)",
+                "winner_probability_pct": "Winner probability (%)",
                 "team_name": "",
-                "confederation": "",
+                "probability_source": "",
             },
             hover_data={
-                "champion_probability_pct": ":.1f",
+                "winner_probability_pct": ":.1f",
+                "probability_source": False,
+                "confederation": True,
                 "final_probability": ":.1%",
                 "semi_final_probability": ":.1%",
                 "dashboard_strength_index": ":.1f",
-                "confederation": False,
             },
         )
         fig = polish_figure(fig, 360)
+        fig.update_xaxes(
+            range=[0, max(10.0, float(comparison["winner_probability_pct"].max()) + 3)],
+            showgrid=True,
+            gridcolor="#e5e7eb",
+        )
+        fig.update_yaxes(
+            categoryorder="array",
+            categoryarray=contenders["team_name"].tolist(),
+        )
+        fig.update_layout(
+            title_text="Model vs Polymarket Title Odds",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(l=10, r=24, t=58, b=10),
+        )
         st.plotly_chart(
             fig,
             config=PLOT_CONFIG,
             key="executive_championship_probabilities",
             **stretch_width_kwargs(st.plotly_chart),
+        )
+        st.caption(
+            "Polymarket is shown as external market context only; these odds are not used by the model."
         )
 
     with chart_cols[1]:

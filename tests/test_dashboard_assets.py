@@ -268,6 +268,7 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     assert "historical training rows" in source
     assert "Training Data and Signal Weighting" in source
     assert "Championship Probability Layer" in source
+    assert "Model vs Polymarket Title Odds" in source
     assert "Repeated simulations estimate title probabilities" in source
     assert "Difficulty of Schedule" in source
     assert "Learned model features do not have fixed dashboard weights" in source
