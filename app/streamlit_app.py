@@ -127,6 +127,48 @@ MODEL_LAYERS = [
         "Group tables drive knockout participants, and tied knockout scorelines are resolved as penalties.",
     ),
 ]
+SCORING_RULES = [
+    (
+        "Exact scoreline",
+        "25 pts",
+        "A perfect final score is the highest single match-stat reward. Correct goal difference or total goals still earns 10 pts.",
+    ),
+    (
+        "Corners",
+        "10 / 5 pts",
+        "Exact corner count earns 10 pts. Being within two corners earns 5 pts.",
+    ),
+    (
+        "Yellow cards",
+        "10 / 5 pts",
+        "Exact yellow-card count earns 10 pts. Being within one yellow card earns 5 pts.",
+    ),
+    (
+        "Red cards",
+        "5 pts",
+        "Exact red-card count earns 5 pts.",
+    ),
+    (
+        "Group winner",
+        "40 pts",
+        "For group-stage matches, the submitted home/away/draw result is worth 40 pts.",
+    ),
+    (
+        "Knockout matchup",
+        "20 / 10 pts",
+        "Both teams correct earns 20 pts. One correct team earns 10 pts.",
+    ),
+    (
+        "Knockout winner",
+        "20 pts",
+        "Correctly picking the knockout match winner earns 20 pts.",
+    ),
+    (
+        "Penalties",
+        "5 pts",
+        "Correctly flagging whether a knockout match goes to penalties earns 5 pts.",
+    ),
+]
 TARGET_RATIONALE = [
     (
         "Blended outcome",
@@ -1632,7 +1674,7 @@ def render_project_story() -> None:
     )
 
     section_header(
-        "Analytics Engineering Pipeline",
+        "Pipeline",
         "The main design choice is separation of concerns: dbt prepares trusted data products, Python handles model state, and Streamlit consumes a stable BI snapshot.",
     )
     step_html = []
@@ -1651,39 +1693,32 @@ def render_project_story() -> None:
     st.markdown(f'<div class="pipeline-grid">{"".join(step_html)}</div>', unsafe_allow_html=True)
 
 
-def render_dbt_usage_section() -> None:
+def render_competition_challenge() -> None:
     section_header(
-        "dbt Usage in the Project",
-        "dbt is the analytics engineering backbone. It turns raw soccer files into trustworthy feature tables and dashboard marts before Python ever trains a model.",
+        "Competition Challenge",
+        "The DataCamp challenge asks for predictions across all 104 World Cup matches: 72 group-stage fixtures and 32 knockout slots. The submission scores exact results, match events, bracket logic, and late-round accuracy.",
     )
+    summary_cols = st.columns(3)
+    with summary_cols[0]:
+        metric_card("Match coverage", "104", "72 group matches + 32 knockout slots")
+    with summary_cols[1]:
+        metric_card("Highest base reward", "40 pts", "Group-stage winner prediction")
+    with summary_cols[2]:
+        metric_card("Round multiplier", "x1 to x16", "Later knockout rounds carry more weight")
+
     st.markdown(
         '<div class="method-grid">'
         + "".join(
-            [
-                method_card(
-                    "Staging models",
-                    "Clean raw fixtures, rankings, results, squads, and event files into predictable names, types, and source-aware fields.",
-                    "Clean",
-                ),
-                method_card(
-                    "Feature models",
-                    "Build features_historical_match_training and 2026 scoring rows with rolling form, point-in-time ranking joins, Elo, squad, and event signals.",
-                    "Model",
-                ),
-                method_card(
-                    "Marts and BI models",
-                    "Publish team profiles, fixture schedules, group standings, model context, and dashboard-ready tables at stable grains.",
-                    "Serve",
-                ),
-                method_card(
-                    "Tests and contracts",
-                    "Protect row counts, uniqueness, accepted values, playoff-team resolution, feature coverage, and leakage prevention.",
-                    "Trust",
-                ),
-            ]
+            method_card(title, body, points)
+            for title, points, body in SCORING_RULES
         )
         + "</div>",
         unsafe_allow_html=True,
+    )
+    st.caption(
+        "All match points are multiplied by round: group stage and Round of 32 x1, "
+        "Round of 16 x2, quarter-finals x4, semi-finals and third-place playoff x8, "
+        "and final x16."
     )
 
 
@@ -1837,9 +1872,9 @@ def render_overview(
     history: pd.DataFrame,
     simulation: pd.DataFrame,
 ) -> None:
+    render_competition_challenge()
     render_executive_view(matches, metrics, teams, simulation)
     render_project_story()
-    render_dbt_usage_section()
     render_historical_goal_environment(history)
 
 
