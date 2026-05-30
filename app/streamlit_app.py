@@ -13,13 +13,12 @@ import streamlit as st
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = APP_DIR / "data"
 
-ROUND_ORDER = [
-    "Round of 32",
-    "Round of 16",
-    "Quarter-final",
-    "Semi-final",
-    "Final",
-    "Third-place playoff",
+BRACKET_ROUND_GROUPS = [
+    ("Round of 32", ["Round of 32"]),
+    ("Round of 16", ["Round of 16"]),
+    ("Quarter-final", ["Quarter-final"]),
+    ("Semi-final", ["Semi-final"]),
+    ("Finals", ["Final", "Third-place playoff"]),
 ]
 PALETTE = {
     "ink": "#0f172a",
@@ -757,9 +756,9 @@ st.markdown(
         }
         .bracket-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(146px, 1fr));
+            grid-template-columns: repeat(5, minmax(146px, 1fr));
             gap: 0.65rem;
-            min-width: 940px;
+            min-width: 780px;
             align-items: start;
         }
         .round-column {
@@ -1945,10 +1944,16 @@ def render_bracket(matches: pd.DataFrame, selected_team: str) -> None:
     )
     knockout = matches[matches["competition_phase"] == "knockout"].copy()
     columns = []
-    for round_name in ROUND_ORDER:
-        round_matches = knockout[knockout["round"] == round_name].sort_values("match_id")
+    for display_round_name, round_names in BRACKET_ROUND_GROUPS:
+        round_matches = knockout[knockout["round"].isin(round_names)].copy()
+        if len(round_names) > 1:
+            round_matches["_bracket_order"] = round_matches["round"].map(
+                {"Final": 0, "Third-place playoff": 1}
+            )
+            round_matches = round_matches.sort_values(["_bracket_order", "match_id"])
+        else:
+            round_matches = round_matches.sort_values("match_id")
         cards = "\n".join(bracket_card(row, selected_team) for _, row in round_matches.iterrows())
-        display_round_name = "Third Place" if round_name == "Third-place playoff" else round_name
         columns.append(
             "\n".join(
                 [
