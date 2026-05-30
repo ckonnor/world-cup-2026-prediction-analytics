@@ -1989,13 +1989,18 @@ def bracket_card(row: pd.Series, selected_team: str) -> str:
     winner = str(row["predicted_winner_team"])
     focus = selected_team != "All teams" and selected_team in {home_team, away_team}
     penalties = " on penalties" if bool(row["penalties"]) else ""
+    result_label = (
+        f"{winner} wins 3rd{penalties}"
+        if row["round"] == "Third-place playoff"
+        else f"{winner} wins{penalties}"
+    )
     return "\n".join(
         [
             f'<div class="match-card{" focus" if focus else ""}">',
             f'<div class="match-meta">Match {int(row["match_id"])}</div>',
             team_line(home_team, row["predicted_home_goals"], winner),
             team_line(away_team, row["predicted_away_goals"], winner),
-            f'<div class="winner-note">{safe(winner)} wins{safe(penalties)}</div>',
+            f'<div class="winner-note">{safe(result_label)}</div>',
             "</div>",
         ]
     )

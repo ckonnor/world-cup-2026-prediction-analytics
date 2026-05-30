@@ -251,6 +251,28 @@ def test_scatter_axis_focus_ignores_tiny_probability_outliers() -> None:
     assert streamlit_app.padded_axis_range(focused, "dashboard_strength_index") == [55.0, 85.0]
 
 
+def test_third_place_bracket_card_labels_placement_result() -> None:
+    streamlit_app = _load_streamlit_app_module()
+
+    card = streamlit_app.bracket_card(
+        pd.Series(
+            {
+                "match_id": 103,
+                "round": "Third-place playoff",
+                "predicted_home_team": "Brazil",
+                "predicted_away_team": "Netherlands",
+                "predicted_home_goals": 1,
+                "predicted_away_goals": 0,
+                "predicted_winner_team": "Brazil",
+                "penalties": False,
+            }
+        ),
+        "All teams",
+    )
+
+    assert "Brazil wins 3rd" in card
+
+
 def test_dashboard_includes_portfolio_case_study_story() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
