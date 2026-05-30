@@ -757,9 +757,9 @@ st.markdown(
         }
         .bracket-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(128px, 1fr));
-            gap: 0.6rem;
-            min-width: 760px;
+            grid-template-columns: repeat(6, minmax(146px, 1fr));
+            gap: 0.65rem;
+            min-width: 940px;
             align-items: start;
         }
         .round-column {
@@ -1948,11 +1948,12 @@ def render_bracket(matches: pd.DataFrame, selected_team: str) -> None:
     for round_name in ROUND_ORDER:
         round_matches = knockout[knockout["round"] == round_name].sort_values("match_id")
         cards = "\n".join(bracket_card(row, selected_team) for _, row in round_matches.iterrows())
+        display_round_name = "Third Place" if round_name == "Third-place playoff" else round_name
         columns.append(
             "\n".join(
                 [
                     '<div class="round-column">',
-                    f'<div class="round-title">{safe(round_name)}</div>',
+                    f'<div class="round-title">{safe(display_round_name)}</div>',
                     cards,
                     "</div>",
                 ]
@@ -2370,6 +2371,9 @@ def render_team_lens(
         [
             "team_name",
             "group_letter",
+            "dashboard_strength_index",
+            "polymarket_outright_label",
+            "route_difficulty_index",
             "fifa_rank",
             "current_elo",
             "fifa_points",
@@ -2380,14 +2384,14 @@ def render_team_lens(
             "attacking_star_power_z",
             "avg_corners_for",
             "blended_yellow_cards_for",
-            "route_difficulty_index",
-            "dashboard_strength_index",
-            "polymarket_outright_label",
             "profile_coverage_pct",
         ],
         {
             "team_name": "Team",
             "group_letter": "Group",
+            "dashboard_strength_index": "Strength",
+            "polymarket_outright_label": "Polymarket Odds",
+            "route_difficulty_index": "Route Difficulty",
             "fifa_rank": "Rank",
             "current_elo": "Elo",
             "fifa_points": "FIFA Points",
@@ -2398,9 +2402,6 @@ def render_team_lens(
             "attacking_star_power_z": "Attack",
             "avg_corners_for": "Corners For",
             "blended_yellow_cards_for": "Yellows",
-            "route_difficulty_index": "Route Difficulty",
-            "dashboard_strength_index": "Strength",
-            "polymarket_outright_label": "Polymarket Odds",
             "profile_coverage_pct": "Coverage",
         },
         460,
