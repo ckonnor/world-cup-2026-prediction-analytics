@@ -688,6 +688,34 @@ st.markdown(
             color: #1e40af;
             border-color: #93c5fd;
         }
+        .scoring-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin: 0.85rem 0 0.75rem;
+        }
+        .scoring-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-height: 8.25rem;
+            padding: 0.75rem;
+        }
+        .scoring-card .priority-badge {
+            margin-bottom: 0.55rem;
+        }
+        .scoring-title {
+            color: var(--ink);
+            font-size: 0.95rem;
+            font-weight: 760;
+            line-height: 1.2;
+            margin-bottom: 0.35rem;
+        }
+        .scoring-body {
+            color: #475569;
+            font-size: 0.78rem;
+            line-height: 1.35;
+        }
         .priority-badge {
             border-radius: 999px;
             background: var(--subtle);
@@ -885,8 +913,13 @@ st.markdown(
                 justify-content: flex-start;
                 margin-top: 0.75rem;
             }
-            .leader-strip, .prediction-grid, .story-grid, .pipeline-grid, .method-grid, .source-grid {
+            .leader-strip, .prediction-grid, .story-grid, .pipeline-grid, .method-grid, .source-grid, .scoring-grid {
                 grid-template-columns: 1fr;
+            }
+        }
+        @media (min-width: 1001px) and (max-width: 1180px) {
+            .scoring-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
     </style>
@@ -1140,6 +1173,23 @@ def data_source_card(
             "</div>",
         ]
     )
+
+
+def scoring_rules_grid() -> str:
+    rows = []
+    for title, points, body in SCORING_RULES:
+        rows.append(
+            "\n".join(
+                [
+                    '<div class="scoring-card">',
+                    f'<div class="priority-badge">{safe(points)}</div>',
+                    f'<div class="scoring-title">{safe(title)}</div>',
+                    f'<div class="scoring-body">{safe(body)}</div>',
+                    "</div>",
+                ]
+            )
+        )
+    return f'<div class="scoring-grid competition-scoring-grid">{"".join(rows)}</div>'
 
 
 def section_header(title: str, copy: str | None = None) -> None:
@@ -1684,7 +1734,7 @@ def render_project_story() -> None:
 
 def render_competition_challenge() -> None:
     section_header(
-        "Competition Challenge",
+        "Competition Overview",
         "The DataCamp challenge asks for predictions across all 104 World Cup matches: 72 group-stage fixtures and 32 knockout slots. The submission scores exact results, match events, bracket logic, and late-round accuracy.",
     )
     summary_cols = st.columns(3)
@@ -1695,15 +1745,7 @@ def render_competition_challenge() -> None:
     with summary_cols[2]:
         metric_card("Round multiplier", "x1 to x16", "Later knockout rounds carry more weight")
 
-    st.markdown(
-        '<div class="method-grid">'
-        + "".join(
-            method_card(title, body, points)
-            for title, points, body in SCORING_RULES
-        )
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(scoring_rules_grid(), unsafe_allow_html=True)
     st.caption(
         "All match points are multiplied by round: group stage and Round of 32 x1, "
         "Round of 16 x2, quarter-finals x4, semi-finals and third-place playoff x8, "

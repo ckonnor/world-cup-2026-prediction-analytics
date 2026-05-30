@@ -255,10 +255,11 @@ def test_dashboard_includes_portfolio_case_study_story() -> None:
     source = Path("app/streamlit_app.py").read_text(encoding="utf-8")
 
     assert "Overview" in source
-    assert "Competition Challenge" in source
+    assert "Competition Overview" in source
     assert "Exact scoreline" in source
     assert "Group-stage winner prediction" in source
     assert "Round of 16 x2" in source
+    assert "competition-scoring-grid" in source
     assert "Project Build" in source
     assert "Pipeline" in source
     assert "Analytics Engineering Pipeline" not in source
