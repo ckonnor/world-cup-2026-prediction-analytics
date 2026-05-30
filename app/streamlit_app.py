@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import inspect
 from pathlib import Path
 
 import pandas as pd
@@ -34,6 +35,19 @@ PALETTE = {
     "subtle": "#f8fafc",
 }
 PLOT_CONFIG = {"displayModeBar": False}
+
+
+def stretch_width_kwargs(element_func: object) -> dict[str, object]:
+    """Use the current Streamlit width API while preserving older local installs."""
+    try:
+        parameters = inspect.signature(element_func).parameters
+    except (TypeError, ValueError):
+        parameters = {}
+    if "width" in parameters:
+        return {"width": "stretch"}
+    return {"use_container_width": True}
+
+
 PROJECT_PILLARS = [
     (
         "Data product",
@@ -1115,7 +1129,7 @@ def display_table(
         table[column] = table[column].round(3)
     table = table.where(pd.notna(table), "")
     dataframe_args = {
-        "use_container_width": True,
+        **stretch_width_kwargs(st.dataframe),
         "hide_index": True,
     }
     if height is not None:
@@ -1541,9 +1555,9 @@ def render_simulation_summary(
         fig = polish_figure(fig, 360)
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config=PLOT_CONFIG,
             key="executive_championship_probabilities",
+            **stretch_width_kwargs(st.plotly_chart),
         )
 
     with chart_cols[1]:
@@ -1665,9 +1679,9 @@ def render_historical_goal_environment(history: pd.DataFrame) -> None:
     fig = polish_figure(fig, 330)
     st.plotly_chart(
         fig,
-        use_container_width=True,
         config=PLOT_CONFIG,
         key="overview_goal_environment",
+        **stretch_width_kwargs(st.plotly_chart),
     )
 
 
@@ -1757,9 +1771,9 @@ def render_executive_view(
         fig = polish_figure(fig, 360)
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config=PLOT_CONFIG,
             key="executive_strength_index",
+            **stretch_width_kwargs(st.plotly_chart),
         )
 
     with chart_cols[1]:
@@ -1783,9 +1797,9 @@ def render_executive_view(
         fig.update_layout(showlegend=False, coloraxis_showscale=False)
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config=PLOT_CONFIG,
             key="executive_scoreline_distribution",
+            **stretch_width_kwargs(st.plotly_chart),
         )
 
 
@@ -1919,9 +1933,9 @@ def render_groups(
         fig.update_layout(coloraxis_showscale=False)
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config=PLOT_CONFIG,
             key="group_points_summary",
+            **stretch_width_kwargs(st.plotly_chart),
         )
 
     section_header(f"Group {group} Detail")
@@ -1966,9 +1980,9 @@ def render_groups(
     fig.update_layout(coloraxis_showscale=False)
     st.plotly_chart(
         fig,
-        use_container_width=True,
         config=PLOT_CONFIG,
         key="group_detail_points",
+        **stretch_width_kwargs(st.plotly_chart),
     )
 
     if show_focused_matches:
@@ -2054,9 +2068,9 @@ def render_team_lens(
             fig.update_yaxes(range=padded_axis_range(axis_frame, "dashboard_strength_index"))
             st.plotly_chart(
                 fig,
-                use_container_width=True,
                 config=PLOT_CONFIG,
                 key="team_lens_field_scatter",
+                **stretch_width_kwargs(st.plotly_chart),
             )
 
         with chart_cols[1]:
@@ -2106,9 +2120,9 @@ def render_team_lens(
             )
             st.plotly_chart(
                 fig,
-                use_container_width=True,
                 config=PLOT_CONFIG,
                 key="team_lens_contender_routes",
+                **stretch_width_kwargs(st.plotly_chart),
             )
     else:
         profile = teams.loc[teams["team_name"] == selected_team].iloc[0]
@@ -2159,9 +2173,9 @@ def render_team_lens(
             fig.update_layout(coloraxis_showscale=False)
             st.plotly_chart(
                 fig,
-                use_container_width=True,
                 config=PLOT_CONFIG,
                 key=f"team_lens_signals_{selected_team}",
+                **stretch_width_kwargs(st.plotly_chart),
             )
 
         with lens_cols[1]:
@@ -2588,9 +2602,9 @@ def render_model_evidence(
         fig.update_xaxes(range=[0, 70])
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config=PLOT_CONFIG,
             key="model_metrics_accuracy",
+            **stretch_width_kwargs(st.plotly_chart),
         )
 
     with chart_cols[1]:
@@ -2609,9 +2623,9 @@ def render_model_evidence(
         fig = polish_figure(fig, 360)
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config=PLOT_CONFIG,
             key="model_quality_checks",
+            **stretch_width_kwargs(st.plotly_chart),
         )
 
     display_table(
