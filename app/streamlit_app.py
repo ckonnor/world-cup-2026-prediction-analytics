@@ -39,6 +39,9 @@ PLOT_CONFIG = {"displayModeBar": False}
 
 def stretch_width_kwargs(element_func: object) -> dict[str, object]:
     """Use the current Streamlit width API while preserving older local installs."""
+    version_parts = tuple(int(part) for part in st.__version__.split(".")[:2])
+    if version_parts < (1, 58):
+        return {"use_container_width": True}
     try:
         parameters = inspect.signature(element_func).parameters
     except (TypeError, ValueError):
@@ -270,6 +273,18 @@ DATA_SOURCE_LINKS = [
                 "Club player stats",
                 "https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026",
             ),
+        ],
+    ),
+    (
+        "Market context",
+        "Polymarket",
+        "Outright winner probabilities shown in the dashboard as external market context only. These values are not used by the model.",
+        [
+            (
+                "World Cup winner market",
+                "https://polymarket.com/event/2026-fifa-world-cup-winner-595",
+            ),
+            ("Polymarket market data API", "https://docs.polymarket.com/market-data/overview"),
         ],
     ),
 ]
@@ -857,6 +872,7 @@ def load_data() -> dict[str, pd.DataFrame]:
         "quality": pd.read_csv(DATA_DIR / "dashboard_data_quality.csv"),
         "history": pd.read_csv(DATA_DIR / "dashboard_historical_competition_summary.csv"),
         "simulation": pd.read_csv(DATA_DIR / "dashboard_tournament_simulation.csv"),
+        "polymarket": pd.read_csv(DATA_DIR / "dashboard_polymarket_outrights.csv"),
     }
     data["matches"]["date_utc"] = pd.to_datetime(data["matches"]["date_utc"], utc=True)
     data["context"]["match_date_utc"] = pd.to_datetime(data["context"]["match_date_utc"], utc=True)
@@ -874,12 +890,23 @@ def load_data() -> dict[str, pd.DataFrame]:
         on="team_name",
         how="left",
     )
+    polymarket_columns = [
+        "team_name",
+        "polymarket_outright_probability",
+        "polymarket_snapshot_at",
+    ]
+    data["teams"] = data["teams"].merge(
+        data["polymarket"][available_columns(data["polymarket"], polymarket_columns)],
+        on="team_name",
+        how="left",
+    )
     for column, default in {
         "champion_probability": 0.0,
         "final_probability": 0.0,
         "semi_final_probability": 0.0,
         "route_difficulty_index": 50.0,
         "title_route_samples": 0,
+        "polymarket_outright_probability": 0.0,
     }.items():
         if column not in data["teams"].columns:
             data["teams"][column] = default
@@ -2267,6 +2294,9 @@ def render_team_lens(
     team_profile_table["profile_coverage_pct"] = (
         team_profile_table["profile_completeness_score"] * 100
     ).round(0).astype(int).astype(str) + "%"
+    team_profile_table["polymarket_outright_label"] = team_profile_table[
+        "polymarket_outright_probability"
+    ].map(pct)
     full_coverage_count = int((team_profile_table["profile_completeness_score"] == 1).sum())
     partial_coverage_count = int((team_profile_table["profile_completeness_score"] < 1).sum())
     display_table(
@@ -2286,6 +2316,7 @@ def render_team_lens(
             "blended_yellow_cards_for",
             "route_difficulty_index",
             "dashboard_strength_index",
+            "polymarket_outright_label",
             "profile_coverage_pct",
         ],
         {
@@ -2303,6 +2334,7 @@ def render_team_lens(
             "blended_yellow_cards_for": "Yellows",
             "route_difficulty_index": "Route Difficulty",
             "dashboard_strength_index": "Strength",
+            "polymarket_outright_label": "Polymarket Odds",
             "profile_coverage_pct": "Coverage",
         },
         460,
@@ -2316,13 +2348,19 @@ def render_team_lens(
             "attacking_star_power_z": "How much proven international attacking production is in the squad. Midfielder/forward goals and top scorer concentration push this higher.",
             "route_difficulty_index": "How difficult the team's simulated title path is. It is based on the average strength of knockout opponents faced in championship-winning simulations, scaled from 0 to 100.",
             "dashboard_strength_index": "A dashboard-only composite view of team strength. It blends FIFA points, FIFA rank, Elo, adjusted form, and international pedigree into one scan-friendly score.",
+            "polymarket_outright_label": "Current Polymarket implied probability that this team wins the World Cup outright. This is shown as external market context only and is not used by the model.",
             "profile_coverage_pct": "How complete the team profile is across the five expected inputs: form, FIFA ranking, squad, event profile, and external player profile. It is a data-quality check, not a performance score.",
         },
     )
+    odds_timestamp = team_profile_table["polymarket_snapshot_at"].dropna()
+    odds_note = ""
+    if not odds_timestamp.empty:
+        odds_note = f" Polymarket odds snapshot: {safe(odds_timestamp.iloc[0])}."
     st.caption(
         f"Coverage is a data-completeness check, not a performance score: "
         f"{full_coverage_count} teams have all five profile inputs and "
         f"{partial_coverage_count} teams are missing one input."
+        f"{odds_note}"
     )
 
 

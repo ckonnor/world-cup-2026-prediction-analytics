@@ -15,6 +15,7 @@ EXPECTED_FILES = {
     "dashboard_match_predictions.csv",
     "dashboard_model_metrics.csv",
     "dashboard_player_power_profiles.csv",
+    "dashboard_polymarket_outrights.csv",
     "dashboard_team_profiles.csv",
     "dashboard_tournament_simulation.csv",
 }
@@ -137,6 +138,29 @@ def test_dashboard_player_power_contract() -> None:
     assert players["team_player_power_rank"].notna().all()
     assert players["player_star_power_index"].between(0, 100).all()
     assert players.groupby("team_name")["team_player_power_rank"].min().eq(1).all()
+
+
+def test_dashboard_polymarket_outrights_contract() -> None:
+    teams = _read_dashboard_csv("dashboard_team_profiles.csv")
+    odds = _read_dashboard_csv("dashboard_polymarket_outrights.csv")
+
+    required_columns = {
+        "team_name",
+        "polymarket_market_name",
+        "polymarket_outright_probability",
+        "polymarket_best_bid",
+        "polymarket_best_ask",
+        "polymarket_last_trade_price",
+        "polymarket_market_slug",
+        "polymarket_event_url",
+        "polymarket_snapshot_at",
+    }
+    assert required_columns.issubset(odds.columns)
+    assert len(odds) == 48
+    assert odds["team_name"].is_unique
+    assert set(odds["team_name"]) == set(teams["team_name"])
+    assert odds["polymarket_outright_probability"].between(0, 1).all()
+    assert odds["polymarket_snapshot_at"].notna().all()
 
 
 def test_dashboard_metrics_contract() -> None:
@@ -262,6 +286,8 @@ def test_methodology_includes_source_links() -> None:
     assert "https://footystats.org/download-stats-csv" in source
     assert "https://footystats.org/england/premier-league/datasets" in source
     assert "https://www.kaggle.com/datasets/hubertsidorowicz/football-players-stats-2025-2026" in source
+    assert "https://polymarket.com/event/2026-fifa-world-cup-winner-595" in source
+    assert "https://docs.polymarket.com/market-data/overview" in source
 
 
 def test_dashboard_navigation_is_consolidated() -> None:
@@ -298,6 +324,8 @@ def test_team_profile_table_explains_model_columns() -> None:
     assert "How battle-tested this squad is at senior international level" in source
     assert "A dashboard-only composite view of team strength" in source
     assert "Coverage is a data-completeness check" in source
+    assert "Polymarket Odds" in source
+    assert "shown as external market context only and is not used by the model" in source
     assert "Player Power Table" in source
     assert "not an official FIFA player rating" in source
 

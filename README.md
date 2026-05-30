@@ -44,6 +44,7 @@ The model uses a mix of competition files and public soccer data:
 - international match-event data for corners and cards
 - club player discipline data
 - country-level player aggregate features
+- Polymarket outright winner probabilities for dashboard-only market context
 
 A key modeling choice is point-in-time feature engineering. Historical training rows only use information that would have been available before each match. That keeps the validation more honest, because the model is not allowed to learn from future rankings or future form.
 
