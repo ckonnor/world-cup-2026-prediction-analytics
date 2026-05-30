@@ -168,7 +168,7 @@ main_marts.mart_team_strength
 main_marts.mart_squad_strength
 main_marts.mart_team_event_profile
 main_marts.mart_latest_fifa_rankings
-main_features.features_submission_baseline
+main_features.features_historical_match_training
 main_features.features_world_cup_group_matches
 main_bi.bi_team_profiles
 main_bi.bi_match_feature_context

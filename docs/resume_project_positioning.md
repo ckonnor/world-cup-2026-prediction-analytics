@@ -23,9 +23,7 @@ Built a reproducible FIFA World Cup 2026 forecasting warehouse using Python, Duc
 - Final submission files are schema-validated before use in DataCamp.
 - The BI layer separates dashboard consumption tables from model-training tables, which mirrors real analytics engineering practice.
 
-## Next Portfolio Improvements
+## Optional Future Improvements
 
-- Deploy the Streamlit dashboard and add the public app link to the README.
 - Add dbt docs screenshots for the feature and BI model lineage.
-- Add dashboard screenshots to the repo page once the final visual state is stable.
 - Write a short case-study post that explains the project decisions in business language.

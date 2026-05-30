@@ -6,7 +6,6 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 
-from world_cup.baseline import build_group_standings
 from world_cup.paths import (
     BI_EXPORT_DIR,
     DUCKDB_PATH,
@@ -17,6 +16,7 @@ from world_cup.paths import (
     SUBMISSION_KNOCKOUT_PREDICTIONS_PATH,
     SUBMISSION_VALIDATION_PATH,
 )
+from world_cup.tournament_rules import build_group_standings
 
 
 BI_TABLES = {

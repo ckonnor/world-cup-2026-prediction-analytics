@@ -12,10 +12,6 @@ import streamlit as st
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = APP_DIR / "data"
 
-PHASE_LABELS = {
-    "group": "Group stage",
-    "knockout": "Knockout stage",
-}
 ROUND_ORDER = [
     "Round of 32",
     "Round of 16",
@@ -1273,17 +1269,6 @@ def group_qualifiers(standings: pd.DataFrame) -> pd.DataFrame:
     return pivot.rename(columns={"group_letter": "Group"})
 
 
-def outcome_distribution(matches: pd.DataFrame) -> pd.DataFrame:
-    result = (
-        matches.groupby(["competition_phase", "winner_label"], dropna=False)
-        .size()
-        .reset_index(name="matches")
-    )
-    result["winner_label"] = result["winner_label"].str.title()
-    result["phase_label"] = result["competition_phase"].map(PHASE_LABELS)
-    return result
-
-
 def filtered_match_explorer(
     matches: pd.DataFrame,
     selected_phase: str,
@@ -1437,7 +1422,7 @@ def render_leader_card(matches: pd.DataFrame) -> None:
             [
                 '<div class="leader-card">',
                 '<div class="leader-label">Tournament forecast</div>',
-                f'<div class="leader-title">{safe(champion)} win the World Cup</div>',
+                f'<div class="leader-title">{safe(champion)} wins the World Cup</div>',
                 f'<div class="leader-detail">{safe(final_description(final_row))}. '
                 f'{safe(third_place)} are projected to finish third.</div>',
                 '<div class="leader-strip">',

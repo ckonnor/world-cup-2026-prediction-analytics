@@ -1,29 +1,6 @@
 version: 2
 
 models:
-  - name: features_submission_baseline
-    description: First deterministic baseline prediction table for submission generation.
-    columns:
-      - name: match_id
-        tests:
-          - not_null
-          - unique
-      - name: predicted_home_goals
-        tests:
-          - not_null
-      - name: predicted_away_goals
-        tests:
-          - not_null
-      - name: corners
-        tests:
-          - not_null
-      - name: yellow_cards
-        tests:
-          - not_null
-      - name: red_cards
-        tests:
-          - not_null
-
   - name: features_historical_match_training
     description: Point-in-time training table with one row per historical match and prior-form features for both teams.
     columns:

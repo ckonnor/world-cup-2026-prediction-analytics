@@ -55,22 +55,6 @@ Prediction columns:
 - `True`
 - `False`
 
-## Local Baseline Outputs
-
-Run:
-
-```powershell
-.\.venv\Scripts\python.exe src\generate_submission.py
-```
-
-Outputs:
-
-```text
-data/processed/group_predictions_baseline.csv
-data/processed/knockout_predictions_baseline.csv
-data/processed/baseline_predictions.csv
-```
-
 ## Local Model Outputs
 
 Run:

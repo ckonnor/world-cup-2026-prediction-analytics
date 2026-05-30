@@ -16,7 +16,6 @@ from sklearn.metrics import accuracy_score, mean_absolute_error
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from world_cup.baseline import build_group_standings, resolve_knockout_slot
 from world_cup.paths import (
     DUCKDB_PATH,
     MODEL_GROUP_PREDICTIONS_V2_PATH,
@@ -27,6 +26,7 @@ from world_cup.paths import (
     MODEL_TOURNAMENT_SIMULATION_V2_PATH,
     PROCESSED_DIR,
 )
+from world_cup.tournament_rules import build_group_standings, resolve_knockout_slot
 
 
 BASE_FEATURE_COLUMNS = [

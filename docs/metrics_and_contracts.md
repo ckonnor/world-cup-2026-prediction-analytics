@@ -15,7 +15,7 @@ This project uses two kinds of contracts:
 | Reconciled exact score accuracy | Exact scoreline accuracy after calibration. | Higher is better | Useful for the competition, but volatile and naturally lower than outcome accuracy. |
 | Average goals MAE | Mean absolute error across home and away goals. | Lower is better | Measures scoreline distance even when exact score misses. |
 
-Current targets are stored in `dashboard_model_metrics.csv` and shown in the Streamlit **Model Evidence** tab.
+Current targets are stored in `dashboard_model_metrics.csv` and shown in the Streamlit **Methodology** tab.
 
 ## Dashboard Data Contracts
 

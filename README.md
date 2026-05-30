@@ -4,6 +4,8 @@ This project started as a DataCamp competition entry and grew into an analytics 
 
 The final project combines dbt, DuckDB, and Python to turn raw soccer data into model-ready features, tournament predictions, validation checks, and dashboard-ready datasets.
 
+![Dashboard preview](docs/assets/dashboard-preview.png)
+
 ## What This Project Does
 
 The competition asks for predictions across all 104 World Cup matches:
@@ -70,9 +72,9 @@ The latest stable validation metrics are:
 
 | Metric | Result |
 | --- | ---: |
-| Direct outcome accuracy | 62.4% |
-| Blended scoreline outcome accuracy | 62.4% |
-| Exact score accuracy | 14.7% |
+| Direct outcome accuracy | 62.8% |
+| Blended scoreline outcome accuracy | 62.6% |
+| Reconciled exact score accuracy | 14.9% |
 | Average goals MAE | 0.907 |
 
 Those numbers are not betting-grade, but they are realistic for a public-data international soccer forecast without market odds. Exact score prediction is especially hard, so the model is intentionally conservative with scorelines.
@@ -105,8 +107,8 @@ Python tests cover:
 At the time of the latest commit:
 
 ```text
-dbt build: PASS=272 WARN=0 ERROR=0
-pytest: 22 passed
+dbt build: PASS=305 WARN=0 ERROR=0
+pytest: 34 passed
 ```
 
 GitHub Actions also parses the dbt project, validates Python and Streamlit syntax, runs the test suite, and uploads dbt parse artifacts for lineage inspection.

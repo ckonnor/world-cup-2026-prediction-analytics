@@ -68,9 +68,9 @@ Current holdout metrics:
 
 | Metric | Value |
 | --- | ---: |
-| Direct outcome accuracy | 62.4% |
-| Blended scoreline outcome accuracy | 62.4% |
-| Exact score accuracy | 14.7% |
+| Direct outcome accuracy | 62.8% |
+| Blended scoreline outcome accuracy | 62.6% |
+| Reconciled exact score accuracy | 14.9% |
 | Average goals MAE | 0.907 |
 
 The final submission export validates:

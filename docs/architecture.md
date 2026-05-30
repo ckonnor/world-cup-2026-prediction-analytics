@@ -13,7 +13,7 @@ flowchart LR
     features["dbt features<br/>Historical training table and 2026 scoring table"]
     python["Python modeling<br/>Goals, outcomes, calibration, bracket simulation"]
     exports["Validated outputs<br/>DataCamp submission and BI extracts"]
-    dashboard["Streamlit dashboard<br/>Executive story, bracket, teams, matches, evidence"]
+    dashboard["Streamlit dashboard<br/>Overview, tournament, teams, methodology"]
 
     raw --> staging --> intermediate --> marts --> features --> python --> exports --> dashboard
     marts --> exports
